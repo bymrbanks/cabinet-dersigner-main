@@ -3,6 +3,7 @@
 import { useMemo, useRef, useEffect } from "react"
 import { BoxGeometry } from "three"
 import Handle from "./handle"
+import SelectionIndicator from "./selection-indicator"
 import { useCabinetStore } from "@/store/cabinet-store"
 import type { Group } from "three"
 
@@ -83,6 +84,10 @@ export default function Door({ width, height, thickness, position, color, hingeP
   // Generate a unique ID for the handle
   const handleId = `${id}-handle`
 
+  // Calculate dimensions for display
+  const displayWidth = Math.round(safeWidth * 100)
+  const displayHeight = Math.round(safeHeight * 100)
+
   return (
     <group
       ref={doorRef}
@@ -116,6 +121,13 @@ export default function Door({ width, height, thickness, position, color, hingeP
           />
         </group>
       </group>
+
+      {/* Selection indicator */}
+      <SelectionIndicator
+        objectId={id}
+        color="#22c55e"
+        label={`Door: ${displayWidth}×${displayHeight}mm (${hingePosition} hinge)`}
+      />
     </group>
   )
 }

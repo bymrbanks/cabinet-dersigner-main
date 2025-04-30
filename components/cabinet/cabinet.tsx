@@ -5,6 +5,9 @@ import { useCabinetStore } from "@/store/cabinet-store"
 import CabinetBody from "./cabinet-body"
 import Compartment from "./compartment"
 import DimensionLines from "./dimension-lines"
+import SelectionIndicator from "./selection-indicator"
+import DirectManipulationControls from "./direct-manipulation-controls"
+import VisualGuides from "./visual-guides"
 import type { Group } from "three"
 
 interface CabinetProps {
@@ -76,6 +79,11 @@ export default function Cabinet({
     }
   })
 
+  // Get cabinet dimensions for display
+  const displayWidth = Math.round(width)
+  const displayHeight = Math.round(height)
+  const displayDepth = Math.round(depth)
+
   return (
     <group
       ref={cabinetRef}
@@ -115,6 +123,15 @@ export default function Cabinet({
 
       {/* Dimension lines */}
       {showDimensionLines && <DimensionLines width={scaledWidth} height={scaledHeight} depth={scaledDepth} />}
+
+      {/* Selection indicator */}
+      <SelectionIndicator objectId={id} label={`${displayWidth}×${displayHeight}×${displayDepth}`} />
+
+      {/* Direct manipulation controls */}
+      <DirectManipulationControls objectId={id} />
+
+      {/* Visual guides */}
+      <VisualGuides objectId={id} />
     </group>
   )
 }

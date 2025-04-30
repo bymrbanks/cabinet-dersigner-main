@@ -2,9 +2,10 @@
 
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei"
-import { Suspense, useEffect } from "react"
+import { Suspense, useEffect, useRef } from "react"
 import Cabinet from "./cabinet/cabinet"
 import Grid from "./cabinet/grid"
+import TransformControls from "./cabinet/transform-controls"
 import { Button } from "@/components/ui/button"
 import { Download, Camera, Undo, Redo, Ruler, GridIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -12,6 +13,7 @@ import { useCabinetStore } from "@/store/cabinet-store"
 
 function Scene() {
   const { toast } = useToast()
+  const orbitControlsRef = useRef<any>(null)
   const {
     cabinets,
     selectedPart,
@@ -87,6 +89,9 @@ function Scene() {
           )
         })}
 
+      {/* Transform controls for selected objects */}
+      <TransformControls />
+
       {/* Background plane for deselection */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -99,7 +104,15 @@ function Scene() {
         <shadowMaterial transparent opacity={0.2} />
       </mesh>
 
-      <OrbitControls minPolarAngle={0} maxPolarAngle={Math.PI / 2} minDistance={2} maxDistance={100} />
+      <OrbitControls
+        ref={orbitControlsRef}
+        className="r3f-orbit-controls"
+        minPolarAngle={0}
+        maxPolarAngle={Math.PI / 2}
+        minDistance={2}
+        maxDistance={100}
+        makeDefault
+      />
     </>
   )
 }
@@ -119,6 +132,7 @@ export default function CabinetDesigner() {
     setSnapToGrid,
     setSelectedPart,
     toggleAllOpenState,
+    selectedPart,
   } = useCabinetStore()
 
   // Initialize history on first render
@@ -220,6 +234,21 @@ export default function CabinetDesigner() {
           Close All
         </Button>
       </div>
+
+      {/* Selection info panel */}
+      {selectedPart && (
+        <div className="absolute bottom-4 left-4 z-10 bg-white p-3 rounded-md shadow-md max-w-xs">
+          <div className="font-medium mb-1">Selected:</div>
+          <div className="text-sm truncate">{selectedPart}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {selectedPart.includes("cabinet") && !selectedPart.includes("door") && !selectedPart.includes("drawer")
+              ? "Use transform controls to move cabinet"
+              : selectedPart.includes("door") || selectedPart.includes("drawer")
+                ? "Double-click to open/close"
+                : "Click to customize"}
+          </div>
+        </div>
+      )}
 
       <Canvas shadows camera={{ position: [8, 8, 8], fov: 40 }}>
         <Suspense fallback={null}>

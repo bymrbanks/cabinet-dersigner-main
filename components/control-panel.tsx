@@ -216,6 +216,12 @@ export default function ControlPanel({ showCutList, setShowCutList }: ControlPan
     }
   }
 
+  // Check if a section is selected
+  const isSectionSelected = (compartmentIndex: number, sectionIndex: number) => {
+    const sectionId = `${activeCabinetId}-compartment-${compartmentIndex}-${sections[sectionIndex]?.type || "door"}-${sectionIndex}`
+    return selectedPart === sectionId
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -743,7 +749,12 @@ export default function ControlPanel({ showCutList, setShowCutList }: ControlPan
             ) : (
               <div className="space-y-3">
                 {sections.map((section, index) => (
-                  <div key={index} className="p-2 border rounded-md">
+                  <div
+                    key={index}
+                    className={`p-2 border rounded-md ${
+                      isSectionSelected(activeCompartmentIndex, index) ? "border-blue-500 bg-blue-50" : ""
+                    }`}
+                  >
                     <div className="flex items-center space-x-2 mb-2">
                       <Select
                         value={section.type}

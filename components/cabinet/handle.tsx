@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react"
 import { useCabinetStore } from "@/store/cabinet-store"
+import SelectionIndicator from "./selection-indicator"
 import type { HandleStyle, HandleOrientation } from "@/store/cabinet-store"
 import type { Group } from "three"
 
@@ -129,6 +130,9 @@ export default function Handle({
           <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} />
         </mesh>
       )}
+
+      {/* Selection indicator */}
+      <SelectionIndicator objectId={id} color="#ec4899" label={`Handle: ${style} (${orientation})`} />
     </group>
   )
 }
