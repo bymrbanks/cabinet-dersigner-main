@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react"
 import { useCabinetStore } from "@/store/cabinet-store"
 import Door from "./door"
 import Drawer from "./drawer"
+import Shelf from "./shelf"
 import type { Group } from "three"
 import type { CabinetSection } from "@/store/cabinet-store"
 
@@ -18,6 +19,7 @@ interface CompartmentProps {
   xOffset: number
   sections: CabinetSection[]
   color: string
+  shelves: number[] // Array of shelf positions (0-100 percentage of height)
 }
 
 export default function Compartment({
@@ -31,6 +33,7 @@ export default function Compartment({
   xOffset,
   sections,
   color,
+  shelves = [],
 }: CompartmentProps) {
   const { setSelectedPart } = useCabinetStore()
   const compartmentRef = useRef<Group>(null)
@@ -113,6 +116,31 @@ export default function Compartment({
     })
   }
 
+  // Render shelves based on the shelves array
+  const renderShelves = () => {
+    // If no shelves defined, return empty array
+    if (!shelves || shelves.length === 0) {
+      return []
+    }
+
+    return shelves.map((position, index) => {
+      // Calculate shelf Y position based on percentage (0-100)
+      const yPosition = thickness + (internalHeight * position) / 100
+      
+      return (
+        <Shelf
+          key={`${cabinetId}-compartment-${compartmentIndex}-shelf-${index}`}
+          id={`${cabinetId}-compartment-${compartmentIndex}-shelf-${index}`}
+          width={internalWidth}
+          depth={internalDepth}
+          thickness={thickness}
+          position={[thickness, yPosition, thickness + backThickness]}
+          color={color}
+        />
+      )
+    })
+  }
+
   return (
     <group
       ref={compartmentRef}
@@ -130,6 +158,9 @@ export default function Compartment({
 
       {/* Render front components (doors/drawers) */}
       {renderFrontComponents()}
+
+      {/* Render shelves */}
+      {renderShelves()}
     </group>
   )
 }

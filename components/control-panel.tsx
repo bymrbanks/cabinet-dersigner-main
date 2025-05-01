@@ -29,6 +29,7 @@ import {
   Minus,
   X,
   RefreshCw,
+  Layers,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
@@ -111,6 +112,9 @@ export default function ControlPanel({ showCutList, setShowCutList }: ControlPan
     toggleOpenState,
     toggleAllOpenState,
     openParts,
+    addShelf,
+    removeShelf,
+    updateShelfPosition,
   } = useCabinetStore()
 
   const { toast } = useToast()
@@ -222,395 +226,19 @@ export default function ControlPanel({ showCutList, setShowCutList }: ControlPan
     return selectedPart === sectionId
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="text-2xl font-bold">Cabinet Designer</div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" onClick={() => undo()} disabled={!canUndo()} title="Undo">
-            <Undo className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => redo()} disabled={!canRedo()} title="Redo">
-            <Redo className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setShowPresets(true)} title="Presets">
-            <BookOpen className="h-4 w-4" />
-          </Button>
-          <Dialog open={showSettings} onOpenChange={setShowSettings}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Cabinet Settings</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Grid Settings</Label>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch id="grid-visible" checked={gridVisible} onCheckedChange={setGridVisible} />
-                      <Label htmlFor="grid-visible">Show Grid</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch id="snap-to-grid" checked={snapToGrid} onCheckedChange={setSnapToGrid} />
-                      <Label htmlFor="snap-to-grid">Snap to Grid</Label>
-                    </div>
-                  </div>
-                  <div className="space-y-2 mt-2">
-                    <Label htmlFor="grid-size">Grid Size</Label>
-                    <div className="flex items-center space-x-2">
-                      <Slider
-                        id="grid-size-slider"
-                        min={0.5}
-                        max={5}
-                        step={0.5}
-                        value={[gridSize]}
-                        onValueChange={(value) => setGridSize(value[0])}
-                      />
-                      <Input
-                        id="grid-size"
-                        type="number"
-                        value={gridSize}
-                        onChange={(e) => setGridSize(Number(e.target.value))}
-                        min={0.5}
-                        max={5}
-                        step={0.5}
-                        className="w-20"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Grid size in meters. Smaller values create a finer grid.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Dimension Constraints ({units})</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="min-width">Min Width</Label>
-                      <Input
-                        id="min-width"
-                        type="number"
-                        value={displayMinWidth.toFixed(units === "mm" ? 0 : 1)}
-                        onChange={(e) => setMinWidth(convertFromCurrentUnit(Number(e.target.value)))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="max-width">Max Width</Label>
-                      <Input
-                        id="max-width"
-                        type="number"
-                        value={displayMaxWidth.toFixed(units === "mm" ? 0 : 1)}
-                        onChange={(e) => setMaxWidth(convertFromCurrentUnit(Number(e.target.value)))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="min-height">Min Height</Label>
-                      <Input
-                        id="min-height"
-                        type="number"
-                        value={displayMinHeight.toFixed(units === "mm" ? 0 : 1)}
-                        onChange={(e) => setMinHeight(convertFromCurrentUnit(Number(e.target.value)))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="max-height">Max Height</Label>
-                      <Input
-                        id="max-height"
-                        type="number"
-                        value={displayMaxHeight.toFixed(units === "mm" ? 0 : 1)}
-                        onChange={(e) => setMaxHeight(convertFromCurrentUnit(Number(e.target.value)))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="min-depth">Min Depth</Label>
-                      <Input
-                        id="min-depth"
-                        type="number"
-                        value={displayMinDepth.toFixed(units === "mm" ? 0 : 1)}
-                        onChange={(e) => setMinDepth(convertFromCurrentUnit(Number(e.target.value)))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="max-depth">Max Depth</Label>
-                      <Input
-                        id="max-depth"
-                        type="number"
-                        value={displayMaxDepth.toFixed(units === "mm" ? 0 : 1)}
-                        onChange={(e) => setMaxDepth(convertFromCurrentUnit(Number(e.target.value)))}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="min-section-height">Min Section Height ({units})</Label>
-                  <Input
-                    id="min-section-height"
-                    type="number"
-                    value={displayMinSectionHeight.toFixed(units === "mm" ? 0 : 1)}
-                    onChange={(e) => setMinSectionHeight(convertFromCurrentUnit(Number(e.target.value)))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="compartment-threshold">Compartment Width Threshold ({units})</Label>
-                  <Input
-                    id="compartment-threshold"
-                    type="number"
-                    value={displayCompartmentThreshold.toFixed(units === "mm" ? 0 : 1)}
-                    onChange={(e) => setCompartmentWidthThreshold(convertFromCurrentUnit(Number(e.target.value)))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    A new compartment will be added for every{" "}
-                    {displayCompartmentThreshold.toFixed(units === "mm" ? 0 : 1)} {units} of cabinet width
-                  </p>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="units">Units:</Label>
-          <RadioGroup
-            value={units}
-            onValueChange={(value) => setUnits(value as "mm" | "inches")}
-            className="flex space-x-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="mm" id="mm" />
-              <Label htmlFor="mm">Millimeters</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="inches" id="inches" />
-              <Label htmlFor="inches">Inches</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="show-dimensions">Dimensions:</Label>
-            <Switch id="show-dimensions" checked={showDimensionLines} onCheckedChange={setShowDimensionLines} />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="snap-grid">Snap to Grid:</Label>
-            <Switch id="snap-grid" checked={snapToGrid} onCheckedChange={setSnapToGrid} />
-          </div>
-        </div>
-      </div>
-
-      {/* Open/Close All buttons */}
-      <div className="flex space-x-2">
-        <Button variant="outline" size="sm" className="flex-1" onClick={() => toggleAllOpenState(true)}>
-          <DoorOpen className="h-4 w-4 mr-2" />
-          Open All Doors & Drawers
-        </Button>
-        <Button variant="outline" size="sm" className="flex-1" onClick={() => toggleAllOpenState(false)}>
-          <DoorClosed className="h-4 w-4 mr-2" />
-          Close All Doors & Drawers
-        </Button>
-      </div>
-
-      {/* Cabinet selector */}
-      {cabinets.length > 1 && (
-        <div className="space-y-2">
-          <Label>Select Cabinet</Label>
-          <div className="flex space-x-2 overflow-x-auto pb-2">
-            {cabinets.map((cabinet) => (
-              <Button
-                key={cabinet.id}
-                variant={activeCabinetId === cabinet.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveCabinet(cabinet.id)}
-                className="flex-shrink-0"
-              >
-                Cabinet {cabinet.id.split("-")[1]}
-              </Button>
-            ))}
-          </div>
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => duplicateCabinet(activeCabinetId!)}
-              disabled={!activeCabinetId}
-            >
-              Duplicate
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => removeCabinet(activeCabinetId!)}
-              disabled={!activeCabinetId || cabinets.length <= 1}
-            >
-              Remove
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Compartment selector */}
-      {compartments.length > 1 && (
-        <div className="space-y-2">
-          <Label>Select Compartment</Label>
-          <div className="flex space-x-2 overflow-x-auto pb-2">
-            {compartments.map((_, index) => (
-              <Button
-                key={`compartment-${index}`}
-                variant={activeCompartmentIndex === index ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveCompartmentIndex(index)}
-                className="flex-shrink-0"
-              >
-                Compartment {index + 1}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Handle settings dialog */}
-      <Dialog open={showHandleSettings} onOpenChange={setShowHandleSettings}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Handle Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Default Handle Style</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["bar", "knob", "cup", "edge", "none"] as HandleStyle[]).map((style) => (
-                  <Button
-                    key={style}
-                    variant={defaultHandleConfig.style === style ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setDefaultHandleConfig({ style })}
-                    className="flex items-center justify-center"
-                  >
-                    {getHandleStyleIcon(style)}
-                    <span className="ml-2">{getHandleStyleName(style)}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {defaultHandleConfig.style !== "none" && (
-              <>
-                <div className="space-y-2">
-                  <Label>Default Handle Orientation</Label>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant={defaultHandleConfig.orientation === "horizontal" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setDefaultHandleConfig({ orientation: "horizontal" })}
-                      disabled={defaultHandleConfig.style === "knob"}
-                    >
-                      <Minus className="h-4 w-4 mr-2" />
-                      Horizontal
-                    </Button>
-                    <Button
-                      variant={defaultHandleConfig.orientation === "vertical" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setDefaultHandleConfig({ orientation: "vertical" })}
-                      disabled={defaultHandleConfig.style === "knob"}
-                    >
-                      <AlignLeft className="h-4 w-4 mr-2" />
-                      Vertical
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="handle-size">Default Handle Size ({units})</Label>
-                  <div className="flex items-center space-x-2">
-                    <Slider
-                      id="handle-size-slider"
-                      min={20}
-                      max={200}
-                      step={10}
-                      value={[defaultHandleConfig.size]}
-                      onValueChange={(value) => setDefaultHandleConfig({ size: value[0] })}
-                    />
-                    <Input
-                      id="handle-size"
-                      type="number"
-                      value={defaultHandleConfig.size}
-                      onChange={(e) => setDefaultHandleConfig({ size: Number(e.target.value) })}
-                      min={20}
-                      max={200}
-                      step={10}
-                      className="w-20"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="handle-position">Default Handle Position (%)</Label>
-                  <div className="flex items-center space-x-2">
-                    <Slider
-                      id="handle-position-slider"
-                      min={10}
-                      max={90}
-                      step={5}
-                      value={[defaultHandleConfig.position]}
-                      onValueChange={(value) => setDefaultHandleConfig({ position: value[0] })}
-                    />
-                    <Input
-                      id="handle-position"
-                      type="number"
-                      value={defaultHandleConfig.position}
-                      onChange={(e) => setDefaultHandleConfig({ position: Number(e.target.value) })}
-                      min={10}
-                      max={90}
-                      step={5}
-                      className="w-20"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Position from top (vertical handles) or left (horizontal handles)
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="handle-color">Default Handle Color</Label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {["#888888", "#555555", "#DDDDDD", "#C0C0C0", "#A67D3D", "#000000"].map((color) => (
-                      <div
-                        key={color}
-                        className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
-                          defaultHandleConfig.color === color ? "border-blue-500" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setDefaultHandleConfig({ color })}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="pt-4 flex justify-between">
-              <Button variant="outline" onClick={() => applyDefaultHandleToAll()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Apply to All Handles
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+  return showCutList ? (
+    <CutList />
+  ) : showPresets ? (
+    <PresetLibrary onClose={() => setShowPresets(false)} />
+  ) : (
+    <div className="h-full overflow-auto space-y-4">
+      <h2 className="text-2xl font-bold">Cabinet Designer</h2>
 
       <Tabs defaultValue="dimensions">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid grid-cols-5 w-full">
           <TabsTrigger value="dimensions">Dimensions</TabsTrigger>
           <TabsTrigger value="structure">Structure</TabsTrigger>
+          <TabsTrigger value="shelves">Shelves</TabsTrigger>
           <TabsTrigger value="handles">Handles</TabsTrigger>
           <TabsTrigger value="export">Export</TabsTrigger>
         </TabsList>
@@ -870,6 +498,78 @@ export default function ControlPanel({ showCutList, setShowCutList }: ControlPan
                   No doors or drawers have been opened yet.
                 </div>
               )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="shelves" className="space-y-4 pt-4">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label>Shelves in Compartment {activeCompartmentIndex + 1}</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addShelf(activeCompartmentIndex)}
+              >
+                <Layers className="h-4 w-4 mr-1" />
+                Add Shelf
+              </Button>
+            </div>
+
+            {!compartments[activeCompartmentIndex]?.shelves || 
+             compartments[activeCompartmentIndex]?.shelves.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No shelves defined. Add a shelf to provide internal storage.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {compartments[activeCompartmentIndex]?.shelves.map((position, index) => (
+                  <div
+                    key={index}
+                    className="p-2 border rounded-md"
+                  >
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Label className="w-24 whitespace-nowrap">Shelf {index + 1}</Label>
+
+                      <div className="flex-1">
+                        <Slider
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={[position]}
+                          onValueChange={(value) => updateShelfPosition(activeCompartmentIndex, index, value[0])}
+                        />
+                      </div>
+
+                      <Input
+                        type="number"
+                        value={position}
+                        onChange={(e) => updateShelfPosition(activeCompartmentIndex, index, Number(e.target.value))}
+                        className="w-16"
+                        min={0}
+                        max={100}
+                        step={5}
+                      />
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeShelf(activeCompartmentIndex, index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Position: {position}% from bottom
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-4 text-sm text-muted-foreground border-t pt-4">
+              <p>Shelves are positioned as a percentage (0-100) of the compartment's internal height.</p>
+              <p>Shelves will automatically adjust to fit when you change the cabinet's dimensions.</p>
             </div>
           </div>
         </TabsContent>

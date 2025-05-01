@@ -23,6 +23,7 @@ export interface CabinetSection {
 
 export interface CabinetCompartment {
   sections: CabinetSection[]
+  shelves: number[] // Heights (percentage) where shelves are positioned
 }
 
 export interface Cabinet {
@@ -97,6 +98,11 @@ interface CabinetStoreState {
   resetSectionHandleToDefault: (compartmentIndex: number, sectionIndex: number) => void
   applyDefaultHandleToAll: () => void
 
+  // Shelf operations
+  addShelf: (compartmentIndex: number, position?: number) => void
+  removeShelf: (compartmentIndex: number, shelfIndex: number) => void
+  updateShelfPosition: (compartmentIndex: number, shelfIndex: number, position: number) => void
+  
   // Handle operations
   getHandleById: (id: string) => HandleConfig | null
   updateHandleById: (id: string, handleConfig: Partial<HandleConfig>) => void
@@ -174,7 +180,11 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
       type: "base",
       compartments: [
         {
-          sections: [],
+          sections: [
+            { type: "drawer", height: 200 },
+            { type: "door", height: 520 },
+          ],
+          shelves: [50], // Default shelf at 50% height
         },
       ],
       materialColor: "#D1D5DB",
@@ -224,7 +234,11 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
       type: "base",
       compartments: [
         {
-          sections: [],
+          sections: [
+            { type: "drawer", height: 200 },
+            { type: "door", height: 520 },
+          ],
+          shelves: [50], // Default shelf at 50% height
         },
       ],
       materialColor: "#D1D5DB",
@@ -253,7 +267,11 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
         type: "base",
         compartments: [
           {
-            sections: [],
+            sections: [
+              { type: "drawer", height: 200 },
+              { type: "door", height: 520 },
+            ],
+            shelves: [50], // Default shelf at 50% height
           },
         ],
         materialColor: "#D1D5DB",
@@ -353,7 +371,7 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
           if (compartmentCount > compartments.length) {
             // Add new compartments
             for (let i = compartments.length; i < compartmentCount; i++) {
-              compartments.push({ sections: [] })
+              compartments.push({ sections: [], shelves: [50] })
             }
           } else if (compartmentCount < compartments.length) {
             // Remove excess compartments
@@ -413,7 +431,7 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
           const compartments = []
           for (let i = 0; i < columns; i++) {
             // Copy existing compartment if available, otherwise create new
-            compartments.push(c.compartments[i] || { sections: [] })
+            compartments.push(c.compartments[i] || { sections: [], shelves: [50] })
           }
           return { ...c, compartments }
         }
@@ -783,6 +801,96 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
     get().saveToHistory()
   },
 
+  // Shelf operations
+  addShelf: (compartmentIndex, position = 50) => {
+    const { cabinets, activeCabinetId } = get()
+    const cabinetIndex = cabinets.findIndex((c) => c.id === activeCabinetId)
+    if (cabinetIndex === -1) return
+
+    const cabinet = cabinets[cabinetIndex]
+    if (!cabinet.compartments[compartmentIndex]) return
+
+    // Add shelf at the specified position (default to middle)
+    const shelves = [...(cabinet.compartments[compartmentIndex].shelves || [])]
+    shelves.push(position)
+    shelves.sort((a, b) => a - b) // Sort shelves by position
+
+    // Update the compartment
+    const compartments = [...cabinet.compartments]
+    compartments[compartmentIndex] = {
+      ...compartments[compartmentIndex],
+      shelves,
+    }
+
+    // Update the cabinet
+    set({
+      cabinets: cabinets.map((c, i) => (i === cabinetIndex ? { ...c, compartments } : c)),
+    })
+
+    get().saveToHistory()
+  },
+
+  removeShelf: (compartmentIndex, shelfIndex) => {
+    const { cabinets, activeCabinetId } = get()
+    const cabinetIndex = cabinets.findIndex((c) => c.id === activeCabinetId)
+    if (cabinetIndex === -1) return
+
+    const cabinet = cabinets[cabinetIndex]
+    if (!cabinet.compartments[compartmentIndex]) return
+
+    // Remove the shelf at specified index
+    const shelves = [...(cabinet.compartments[compartmentIndex].shelves || [])]
+    if (shelfIndex < 0 || shelfIndex >= shelves.length) return
+
+    shelves.splice(shelfIndex, 1)
+
+    // Update the compartment
+    const compartments = [...cabinet.compartments]
+    compartments[compartmentIndex] = {
+      ...compartments[compartmentIndex],
+      shelves,
+    }
+
+    // Update the cabinet
+    set({
+      cabinets: cabinets.map((c, i) => (i === cabinetIndex ? { ...c, compartments } : c)),
+    })
+
+    get().saveToHistory()
+  },
+
+  updateShelfPosition: (compartmentIndex, shelfIndex, position) => {
+    const { cabinets, activeCabinetId } = get()
+    const cabinetIndex = cabinets.findIndex((c) => c.id === activeCabinetId)
+    if (cabinetIndex === -1) return
+
+    const cabinet = cabinets[cabinetIndex]
+    if (!cabinet.compartments[compartmentIndex]) return
+
+    // Update shelf position
+    const shelves = [...(cabinet.compartments[compartmentIndex].shelves || [])]
+    if (shelfIndex < 0 || shelfIndex >= shelves.length) return
+
+    // Ensure position is between 0 and 100
+    position = Math.max(0, Math.min(100, position))
+    shelves[shelfIndex] = position
+    shelves.sort((a, b) => a - b) // Sort shelves by position
+
+    // Update the compartment
+    const compartments = [...cabinet.compartments]
+    compartments[compartmentIndex] = {
+      ...compartments[compartmentIndex],
+      shelves,
+    }
+
+    // Update the cabinet
+    set({
+      cabinets: cabinets.map((c, i) => (i === cabinetIndex ? { ...c, compartments } : c)),
+    })
+
+    get().saveToHistory()
+  },
+  
   // Handle operations
   getHandleById: (id) => {
     const indices = get().getSectionIndexFromId(id)
@@ -802,7 +910,7 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
   // Display settings
   showDimensionLines: true,
   gridVisible: true,
-  gridSize: 1,
+  gridSize: 4,
   gridColor: "#CCCCCC",
   snapToGrid: true,
   setShowDimensionLines: (show) => set({ showDimensionLines: show }),

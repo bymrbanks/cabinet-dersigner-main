@@ -24,7 +24,7 @@ export default function Grid({ size = 20, divisions = 20 }: GridProps) {
       // Make the grid semi-transparent
       if (grid.material) {
         const material = Array.isArray(grid.material) ? grid.material[0] : grid.material
-        material.opacity = 0.5
+        material.opacity = 1
         material.transparent = true
       }
 

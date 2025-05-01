@@ -17,7 +17,10 @@ interface CabinetProps {
   height: number
   depth: number
   type: "base" | "wall"
-  compartments: Array<{ sections: Array<{ type: "door" | "drawer"; height: number }> }>
+  compartments: Array<{ 
+    sections: Array<{ type: "door" | "drawer"; height: number }>;
+    shelves: number[] 
+  }>
   materialColor: string
 }
 
@@ -76,6 +79,7 @@ export default function Cabinet({
       xOffset: index * compartmentWidth,
       index,
       sections: compartment.sections || [],
+      shelves: compartment.shelves || []
     }
   })
 
@@ -117,6 +121,7 @@ export default function Cabinet({
           backThickness={backThickness}
           xOffset={compartment.xOffset}
           sections={compartment.sections}
+          shelves={compartment.shelves}
           color={materialColor}
         />
       ))}

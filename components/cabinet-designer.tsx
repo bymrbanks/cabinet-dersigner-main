@@ -23,10 +23,11 @@ function Scene() {
     addCabinet,
     showDimensionLines,
     snapToGrid,
+    toggleOpenState,
   } = useCabinetStore()
 
   // Handle background click to deselect
-  const handleBackgroundClick = (e) => {
+  const handleBackgroundClick = (e: any) => {
     // Only handle direct background clicks
     if (e.object.name !== "background-plane") return
 
@@ -42,6 +43,17 @@ function Scene() {
       description: "A new cabinet has been added to the scene",
     })
   }
+
+  // Debug function to open a drawer on load (for testing)
+  useEffect(() => {
+    // Log all cabinets for debugging
+    console.log("All cabinets:", cabinets)
+    
+    // Log when a part is selected
+    if (selectedPart) {
+      console.log("Selected part:", selectedPart)
+    }
+  }, [cabinets, selectedPart])
 
   return (
     <>
@@ -250,7 +262,7 @@ export default function CabinetDesigner() {
         </div>
       )}
 
-      <Canvas shadows camera={{ position: [8, 8, 8], fov: 40 }}>
+      <Canvas shadows camera={{ position: [5, 5, 5], fov: 45 }}>
         <Suspense fallback={null}>
           <Scene />
         </Suspense>

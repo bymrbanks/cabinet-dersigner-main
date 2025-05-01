@@ -73,19 +73,65 @@ export default function CutList() {
     })
   }
 
-  // Add shelves for each compartment
-  const compartmentWidth = internalWidth / compartments.length
+  // Calculate shelves based on door sections
+  let totalShelfCount = 0
+  const shelfDimensions: Record<string, { width: number; depth: number; count: number }> = {}
 
-  cutList.push({
-    name: "Shelf",
-    quantity: compartments.length,
-    dimensions: formatDimensions(compartmentWidth - thickness, internalDepth - thickness, thickness),
-    material: "Plywood",
+  // Process each compartment to determine shelf requirements
+  compartments.forEach((compartment, compartmentIndex) => {
+    const compartmentWidth = internalWidth / compartments.length
+    const sections = compartment.sections || []
+    
+    if (sections.length === 0) {
+      // Default single door compartment gets one shelf
+      const shelfWidth = compartmentWidth - thickness
+      const shelfDepth = internalDepth - thickness
+      const key = `${shelfWidth}x${shelfDepth}`
+      
+      if (!shelfDimensions[key]) {
+        shelfDimensions[key] = { width: shelfWidth, depth: shelfDepth, count: 0 }
+      }
+      shelfDimensions[key].count += 1
+      totalShelfCount += 1
+    } else {
+      // Calculate shelves for each door section
+      const totalSectionHeight = sections.reduce((sum, section) => sum + Math.max(0, section?.height || 0), 0)
+      const scaleFactor = totalSectionHeight > 0 ? internalHeight / totalSectionHeight : 1
+      
+      // Find door sections
+      const doorSections = sections.filter(s => s?.type === "door")
+      const tallDoorSections = doorSections.filter(s => (s?.height || 0) * scaleFactor >= 300) // Only doors taller than 300mm get shelves
+      
+      if (tallDoorSections.length > 0) {
+        const shelfWidth = compartmentWidth - thickness
+        const shelfDepth = internalDepth - thickness
+        const key = `${shelfWidth}x${shelfDepth}`
+        
+        if (!shelfDimensions[key]) {
+          shelfDimensions[key] = { width: shelfWidth, depth: shelfDepth, count: 0 }
+        }
+        
+        // One shelf per tall door section
+        shelfDimensions[key].count += tallDoorSections.length
+        totalShelfCount += tallDoorSections.length
+      }
+    }
+  })
+
+  // Add shelves to the cut list
+  Object.values(shelfDimensions).forEach((shelf) => {
+    cutList.push({
+      name: "Shelf",
+      quantity: shelf.count,
+      dimensions: formatDimensions(shelf.width, shelf.depth, thickness),
+      material: "Plywood",
+    })
   })
 
   // Add doors and drawers for each compartment
   compartments.forEach((compartment, compartmentIndex) => {
     const sections = compartment.sections || []
+    const compartmentWidth = internalWidth / compartments.length
 
     if (sections.length === 0) {
       // Default single door for compartment
@@ -215,6 +261,11 @@ export default function CutList() {
           Note: This cut list includes all panels needed to build the cabinet as designed. Standard thickness is assumed
           to be 18mm for structural panels and 5mm for the back panel.
         </p>
+        {totalShelfCount > 0 && (
+          <p className="mt-2">
+            Shelves are automatically added to door sections taller than 300mm for proper storage.
+          </p>
+        )}
       </div>
     </div>
   )
