@@ -156,11 +156,26 @@ export const useFootprintManager = ({
       const deltaX = e.point.x - dragState.startPosition[0]
       const deltaZ = e.point.z - dragState.startPosition[2]
       
+      // Calculate new position
+      let newX = footprint.position[0] + deltaX
+      let newZ = footprint.position[2] + deltaZ
+      
+      // Apply grid constraints (assuming grid is 100x100 centered at origin)
+      const gridSize = 50 // Half the grid size (100/2)
+      const halfWidth = footprint.width / 2
+      const halfDepth = footprint.depth / 2
+      
+      // Constrain x position to keep the box within the grid
+      newX = Math.max(-gridSize + halfWidth, Math.min(gridSize - halfWidth, newX))
+      
+      // Constrain z position to keep the box within the grid
+      newZ = Math.max(-gridSize + halfDepth, Math.min(gridSize - halfDepth, newZ))
+      
       // Update the footprint position
       const newPosition: [number, number, number] = [
-        footprint.position[0] + deltaX,
+        newX,
         footprint.position[1],
-        footprint.position[2] + deltaZ
+        newZ
       ]
       
       updateFootprint(dragState.currentFootprint, { position: newPosition })
@@ -194,13 +209,17 @@ export const useFootprintManager = ({
       let newDepth = resizeState.startDimensions.depth
       let newPosition = [...resizeState.startBoxPosition] as [number, number, number]
       
+      // Grid constraints
+      const gridSize = 50 // Half the grid size
+      const minSize = 0.5 // Minimum box size
+      
       // Apply different resize logic based on which corner is being dragged
       switch(resizeState.corner) {
         case 'topLeft':
           // Width: decrease when dragging left, increase when dragging right
           // Depth: decrease when dragging up, increase when dragging down
-          newWidth = Math.max(0.5, resizeState.startDimensions.width - deltaX * 2)
-          newDepth = Math.max(0.5, resizeState.startDimensions.depth - deltaZ * 2)
+          newWidth = Math.max(minSize, resizeState.startDimensions.width - deltaX * 2)
+          newDepth = Math.max(minSize, resizeState.startDimensions.depth - deltaZ * 2)
           
           // Update position to keep the opposite corner fixed
           newPosition = [
@@ -208,13 +227,23 @@ export const useFootprintManager = ({
             resizeState.startBoxPosition[1],
             resizeState.startBoxPosition[2] + (resizeState.startDimensions.depth - newDepth) / 2
           ]
+          
+          // Check if the new position would put the box outside the grid
+          if (newPosition[0] - newWidth/2 < -gridSize) {
+            newWidth = (newPosition[0] + gridSize) * 2
+            newPosition[0] = -gridSize + newWidth/2
+          }
+          if (newPosition[2] - newDepth/2 < -gridSize) {
+            newDepth = (newPosition[2] + gridSize) * 2
+            newPosition[2] = -gridSize + newDepth/2
+          }
           break
           
         case 'topRight':
           // Width: increase when dragging right, decrease when dragging left
           // Depth: decrease when dragging up, increase when dragging down
-          newWidth = Math.max(0.5, resizeState.startDimensions.width + deltaX * 2)
-          newDepth = Math.max(0.5, resizeState.startDimensions.depth - deltaZ * 2)
+          newWidth = Math.max(minSize, resizeState.startDimensions.width + deltaX * 2)
+          newDepth = Math.max(minSize, resizeState.startDimensions.depth - deltaZ * 2)
           
           // Update position to keep the opposite corner fixed
           newPosition = [
@@ -222,13 +251,23 @@ export const useFootprintManager = ({
             resizeState.startBoxPosition[1],
             resizeState.startBoxPosition[2] + (resizeState.startDimensions.depth - newDepth) / 2
           ]
+          
+          // Check if the new position would put the box outside the grid
+          if (newPosition[0] + newWidth/2 > gridSize) {
+            newWidth = (gridSize - newPosition[0]) * 2
+            newPosition[0] = gridSize - newWidth/2
+          }
+          if (newPosition[2] - newDepth/2 < -gridSize) {
+            newDepth = (newPosition[2] + gridSize) * 2
+            newPosition[2] = -gridSize + newDepth/2
+          }
           break
           
         case 'bottomLeft':
           // Width: decrease when dragging left, increase when dragging right
           // Depth: increase when dragging down, decrease when dragging up
-          newWidth = Math.max(0.5, resizeState.startDimensions.width - deltaX * 2)
-          newDepth = Math.max(0.5, resizeState.startDimensions.depth + deltaZ * 2)
+          newWidth = Math.max(minSize, resizeState.startDimensions.width - deltaX * 2)
+          newDepth = Math.max(minSize, resizeState.startDimensions.depth + deltaZ * 2)
           
           // Update position to keep the opposite corner fixed
           newPosition = [
@@ -236,13 +275,23 @@ export const useFootprintManager = ({
             resizeState.startBoxPosition[1],
             resizeState.startBoxPosition[2] + (newDepth - resizeState.startDimensions.depth) / 2
           ]
+          
+          // Check if the new position would put the box outside the grid
+          if (newPosition[0] - newWidth/2 < -gridSize) {
+            newWidth = (newPosition[0] + gridSize) * 2
+            newPosition[0] = -gridSize + newWidth/2
+          }
+          if (newPosition[2] + newDepth/2 > gridSize) {
+            newDepth = (gridSize - newPosition[2]) * 2
+            newPosition[2] = gridSize - newDepth/2
+          }
           break
           
         case 'bottomRight':
           // Width: increase when dragging right, decrease when dragging left
           // Depth: increase when dragging down, decrease when dragging up
-          newWidth = Math.max(0.5, resizeState.startDimensions.width + deltaX * 2)
-          newDepth = Math.max(0.5, resizeState.startDimensions.depth + deltaZ * 2)
+          newWidth = Math.max(minSize, resizeState.startDimensions.width + deltaX * 2)
+          newDepth = Math.max(minSize, resizeState.startDimensions.depth + deltaZ * 2)
           
           // Update position to keep the opposite corner fixed
           newPosition = [
@@ -250,6 +299,16 @@ export const useFootprintManager = ({
             resizeState.startBoxPosition[1],
             resizeState.startBoxPosition[2] + (newDepth - resizeState.startDimensions.depth) / 2
           ]
+          
+          // Check if the new position would put the box outside the grid
+          if (newPosition[0] + newWidth/2 > gridSize) {
+            newWidth = (gridSize - newPosition[0]) * 2
+            newPosition[0] = gridSize - newWidth/2
+          }
+          if (newPosition[2] + newDepth/2 > gridSize) {
+            newDepth = (gridSize - newPosition[2]) * 2
+            newPosition[2] = gridSize - newDepth/2
+          }
           break
       }
       
@@ -442,7 +501,6 @@ export default function FootprintManager({
         receiveShadow
         name="background-plane"
         onClick={handlePlaneClick}
-        pointerEvents="all"
       >
         <planeGeometry args={[100, 100]} />
         <shadowMaterial transparent opacity={0.2} />

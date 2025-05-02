@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { Footprint, ResizeState } from './types'
@@ -31,6 +31,9 @@ export default function FootprintBox({
   const borderColor = isSelected ? "#FF4500" : "#4682B4"
   const opacity = isSelected ? 0.6 : 0.4
   
+  // Track which edge is being hovered
+  const [hoveredEdge, setHoveredEdge] = useState<ResizeState['corner'] | null>(null)
+  
   // Handle box hover
   const handleBoxHover = useCallback(() => {
     if (toolMode === 'select') {
@@ -45,80 +48,192 @@ export default function FootprintBox({
     }
   }, [toolMode, setCursor])
   
-  // Handle corner hover
-  const handleCornerHover = useCallback((corner: ResizeState['corner']) => {
-    if (toolMode === 'select') {
-      switch (corner) {
+  // Calculate edge positions for edge detection
+  const edges = useMemo(() => {
+    return {
+      topLeft: new THREE.Vector3(-width/2, 0.025, -depth/2),
+      topRight: new THREE.Vector3(width/2, 0.025, -depth/2),
+      bottomLeft: new THREE.Vector3(-width/2, 0.025, depth/2),
+      bottomRight: new THREE.Vector3(width/2, 0.025, depth/2)
+    }
+  }, [width, depth])
+  
+  // Handle pointer move to detect edge proximity
+  const handlePointerMove = useCallback((e: any) => {
+    if (!isSelected || toolMode !== 'select') {
+      setHoveredEdge(null)
+      return
+    }
+    
+    // Get local position of pointer relative to box center
+    const localPoint = new THREE.Vector3(e.point.x, e.point.y, e.point.z)
+    // This is necessary to convert from world to local coordinates
+    const worldPoint = new THREE.Vector3(e.point.x, e.point.y, e.point.z)
+    const groupPosition = new THREE.Vector3(position[0], position[1], position[2])
+    localPoint.sub(groupPosition)
+    
+    // Proximity threshold
+    const threshold = 0.4
+    
+    // Distance to edges
+    const distToTop = Math.abs(localPoint.z - (-depth/2))
+    const distToBottom = Math.abs(localPoint.z - depth/2)
+    const distToLeft = Math.abs(localPoint.x - (-width/2))
+    const distToRight = Math.abs(localPoint.x - width/2)
+    
+    // Find closest edge
+    if (distToTop < threshold && distToLeft < threshold) {
+      setHoveredEdge('topLeft')
+      setCursor("nwse-resize")
+    } else if (distToTop < threshold && distToRight < threshold) {
+      setHoveredEdge('topRight')
+      setCursor("nesw-resize")
+    } else if (distToBottom < threshold && distToLeft < threshold) {
+      setHoveredEdge('bottomLeft')
+      setCursor("nesw-resize")
+    } else if (distToBottom < threshold && distToRight < threshold) {
+      setHoveredEdge('bottomRight')
+      setCursor("nwse-resize")
+    } else if (distToTop < threshold) {
+      setHoveredEdge('topRight')
+      setCursor("ns-resize")
+    } else if (distToBottom < threshold) {
+      setHoveredEdge('bottomLeft')
+      setCursor("ns-resize")
+    } else if (distToLeft < threshold) {
+      setHoveredEdge('topLeft')
+      setCursor("ew-resize")
+    } else if (distToRight < threshold) {
+      setHoveredEdge('bottomRight')
+      setCursor("ew-resize")
+    } else {
+      setHoveredEdge(null)
+      setCursor("grab")
+    }
+  }, [isSelected, toolMode, setCursor, width, depth, position])
+  
+  // Handle pointer down to start resize
+  const handlePointerDown = useCallback((e: any) => {
+    if (!isSelected || toolMode !== 'select') return
+    
+    if (hoveredEdge) {
+      e.stopPropagation()
+      console.log(`Starting resize with edge ${hoveredEdge}`)
+      onResizeStart(e, id, hoveredEdge)
+    } else {
+      onDragStart(e, id)
+    }
+  }, [isSelected, toolMode, hoveredEdge, onResizeStart, onDragStart, id])
+  
+  // Create edge highlights for visual feedback
+  const renderEdgeHighlights = useCallback(() => {
+    if (!isSelected) return null
+    
+    // Calculate geometry for highlighted edges
+    const createEdgeGeometry = (corner: ResizeState['corner']) => {
+      const lineWidth = 0.06
+      let geometry, position, rotation, size
+      
+      switch(corner) {
         case 'topLeft':
-        case 'bottomRight': 
-          setCursor("nwse-resize")
-          break
+          // For top-left, highlight both top and left edges
+          return (
+            <>
+              {/* Left edge */}
+              <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+                <planeGeometry args={[depth, lineWidth]} />
+                <meshStandardMaterial color={hoveredEdge === 'topLeft' ? "#FF0000" : "#FF8C00"} 
+                  transparent opacity={hoveredEdge === 'topLeft' ? 0.8 : 0.5} />
+              </mesh>
+              {/* Top edge */}
+              <mesh position={[0, 0.03, -depth/2]}>
+                <planeGeometry args={[width, lineWidth]} />
+                <meshStandardMaterial color={hoveredEdge === 'topLeft' ? "#FF0000" : "#FF8C00"} 
+                  transparent opacity={hoveredEdge === 'topLeft' ? 0.8 : 0.5} />
+              </mesh>
+            </>
+          )
         case 'topRight':
+          return (
+            <>
+              {/* Right edge */}
+              <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+                <planeGeometry args={[depth, lineWidth]} />
+                <meshStandardMaterial color={hoveredEdge === 'topRight' ? "#FF0000" : "#FF8C00"} 
+                  transparent opacity={hoveredEdge === 'topRight' ? 0.8 : 0.5} />
+              </mesh>
+              {/* Top edge - only if not already highlighted by topLeft */}
+              {hoveredEdge !== 'topLeft' && (
+                <mesh position={[0, 0.03, -depth/2]}>
+                  <planeGeometry args={[width, lineWidth]} />
+                  <meshStandardMaterial color={hoveredEdge === 'topRight' ? "#FF0000" : "#FF8C00"} 
+                    transparent opacity={hoveredEdge === 'topRight' ? 0.8 : 0.5} />
+                </mesh>
+              )}
+            </>
+          )
         case 'bottomLeft':
-          setCursor("nesw-resize")
-          break
+          return (
+            <>
+              {/* Left edge - only if not already highlighted by topLeft */}
+              {hoveredEdge !== 'topLeft' && (
+                <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+                  <planeGeometry args={[depth, lineWidth]} />
+                  <meshStandardMaterial color={hoveredEdge === 'bottomLeft' ? "#FF0000" : "#FF8C00"} 
+                    transparent opacity={hoveredEdge === 'bottomLeft' ? 0.8 : 0.5} />
+                </mesh>
+              )}
+              {/* Bottom edge */}
+              <mesh position={[0, 0.03, depth/2]}>
+                <planeGeometry args={[width, lineWidth]} />
+                <meshStandardMaterial color={hoveredEdge === 'bottomLeft' ? "#FF0000" : "#FF8C00"} 
+                  transparent opacity={hoveredEdge === 'bottomLeft' ? 0.8 : 0.5} />
+              </mesh>
+            </>
+          )
+        case 'bottomRight':
+          return (
+            <>
+              {/* Right edge - only if not already highlighted by topRight */}
+              {hoveredEdge !== 'topRight' && (
+                <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+                  <planeGeometry args={[depth, lineWidth]} />
+                  <meshStandardMaterial color={hoveredEdge === 'bottomRight' ? "#FF0000" : "#FF8C00"} 
+                    transparent opacity={hoveredEdge === 'bottomRight' ? 0.8 : 0.5} />
+                </mesh>
+              )}
+              {/* Bottom edge - only if not already highlighted by bottomLeft */}
+              {hoveredEdge !== 'bottomLeft' && (
+                <mesh position={[0, 0.03, depth/2]}>
+                  <planeGeometry args={[width, lineWidth]} />
+                  <meshStandardMaterial color={hoveredEdge === 'bottomRight' ? "#FF0000" : "#FF8C00"} 
+                    transparent opacity={hoveredEdge === 'bottomRight' ? 0.8 : 0.5} />
+                </mesh>
+              )}
+            </>
+          )
       }
-    }
-  }, [toolMode, setCursor])
-  
-  // Handle corner unhover
-  const handleCornerUnhover = useCallback(() => {
-    if (toolMode === 'select') {
-      setCursor("auto")
-    }
-  }, [toolMode, setCursor])
-  
-  // Create a corner trigger for resizing
-  const createCornerTrigger = useCallback((corner: ResizeState['corner']) => {
-    const handleSize = 0.8 // Larger handle for easier use
-    
-    // Position the handle at the appropriate corner
-    let cornerPosition: [number, number, number] = [0, 0, 0]
-    
-    switch(corner) {
-      case 'topLeft':
-        cornerPosition = [-width/2, 0.1, -depth/2]
-        break
-      case 'topRight':
-        cornerPosition = [width/2, 0.1, -depth/2]
-        break
-      case 'bottomLeft':
-        cornerPosition = [-width/2, 0.1, depth/2]
-        break
-      case 'bottomRight':
-        cornerPosition = [width/2, 0.1, depth/2]
-        break
     }
     
     return (
-      <mesh 
-        key={`${id}-${corner}`}
-        position={cornerPosition}
-        onPointerDown={(e) => {
-          e.stopPropagation()
-          console.log(`Corner ${corner} clicked for footprint ${id}`)
-          onResizeStart(e, id, corner)
-          // Prevent any parent events from firing
-          e.stopPropagation()
-        }}
-        onPointerOver={() => handleCornerHover(corner)}
-        onPointerOut={handleCornerUnhover}
-        onClick={(e) => e.stopPropagation()} // Stop click event from reaching parent
-      >
-        <sphereGeometry args={[handleSize/2, 16, 16]} />
-        <meshStandardMaterial color="#FF0000" transparent opacity={0.9} />
-      </mesh>
+      <>
+        {createEdgeGeometry('topLeft')}
+        {createEdgeGeometry('topRight')}
+        {createEdgeGeometry('bottomLeft')}
+        {createEdgeGeometry('bottomRight')}
+      </>
     )
-  }, [id, width, depth, onResizeStart, handleCornerHover, handleCornerUnhover])
+  }, [isSelected, width, depth, hoveredEdge])
   
   return (
     <group 
-      position={position} 
+      position={position}
       onClick={(e) => {
         e.stopPropagation()
         onSelect(e)
       }}
-      onPointerDown={(e) => onDragStart(e, id)}
+      onPointerMove={handlePointerMove}
+      onPointerDown={handlePointerDown}
       onPointerOver={handleBoxHover}
       onPointerOut={handleBoxUnhover}
       onDoubleClick={(e) => {
@@ -138,15 +253,8 @@ export default function FootprintBox({
         <lineBasicMaterial color={borderColor} linewidth={2} />
       </lineSegments>
 
-      {/* Resize corner handles - only show when selected */}
-      {isSelected && (
-        <>
-          {createCornerTrigger('topLeft')}
-          {createCornerTrigger('topRight')}
-          {createCornerTrigger('bottomLeft')}
-          {createCornerTrigger('bottomRight')}
-        </>
-      )}
+      {/* Edge highlights for resize */}
+      {isSelected && renderEdgeHighlights()}
     </group>
   )
 } 
