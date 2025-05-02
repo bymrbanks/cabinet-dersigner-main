@@ -36,7 +36,7 @@ const defaultHandleConfig: HandleConfig = {
 
 export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
   // Unit settings
-  units: "mm",
+  units: "inches",
   setUnits: (units) => set({ units }),
   convertToCurrentUnit: (value) => {
     if (get().units === "mm") return value

@@ -81,10 +81,10 @@ export let toolbarState: ToolbarState = {
     console.log("Setting default height to", height);
     toolbarState.defaultHeight = height;
   },
-  defaultFootprintWidth: 24,
-  defaultFootprintDepth: 24,
-  defaultFootprintHeight: 30,
-  useCabinetTemplate: false
+  defaultFootprintWidth: 24, // 24 inches
+  defaultFootprintDepth: 24, // 24 inches
+  defaultFootprintHeight: 30, // 30 inches
+  useCabinetTemplate: false, // Flag to indicate if we should use the cabinet template
 }
 
 // Function to get the current tool mode without using hooks
