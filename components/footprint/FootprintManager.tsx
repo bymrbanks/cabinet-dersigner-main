@@ -208,18 +208,19 @@ export const useFootprintManager = ({
       let newX = footprint.position[0] + deltaX
       let newZ = footprint.position[2] + deltaZ
       
-      // Apply grid constraints (walls at x=0, z=0, 20x20 grid)
-      const gridSize = 20 
+      // Apply grid constraints (walls at x=0, z=0, 40x20 grid)
+      const gridWidth = 40
+      const gridDepth = 20
       const halfWidth = footprint.width / 2
       const halfDepth = footprint.depth / 2
       
       // Constrain x position to keep the box within the grid
-      // X must be >= halfWidth (to keep left edge >= 0) and <= gridSize - halfWidth
-      newX = Math.max(halfWidth, Math.min(gridSize - halfWidth, newX))
+      // X must be >= halfWidth (to keep left edge >= 0) and <= gridWidth - halfWidth
+      newX = Math.max(halfWidth, Math.min(gridWidth - halfWidth, newX))
       
       // Constrain z position to keep the box within the grid
-      // Z must be <= -halfDepth (to keep back edge <= 0) and >= -gridSize + halfDepth
-      newZ = Math.min(-halfDepth, Math.max(-gridSize + halfDepth, newZ))
+      // Z must be <= -halfDepth (to keep back edge <= 0) and >= -gridDepth + halfDepth
+      newZ = Math.min(-halfDepth, Math.max(-gridDepth + halfDepth, newZ))
       
       // Update the footprint position
       const newPosition: [number, number, number] = [
@@ -259,8 +260,9 @@ export const useFootprintManager = ({
       let newDepth = resizeState.startDimensions.depth
       let newPosition = [...resizeState.startBoxPosition] as [number, number, number]
       
-      // Grid constraints - walls are at x=0, z=0, 20x20 grid
-      const gridSize = 20 
+      // Grid constraints - walls are at x=0, z=0, 40x20 grid
+      const gridWidth = 40
+      const gridDepth = 20
       const minSize = 0.5 // Minimum box size
       
       // Single directional resizing based on the corner
@@ -297,10 +299,10 @@ export const useFootprintManager = ({
           ]
           
           // Check grid constraints for right edge
-          // Right edge must be <= gridSize
-          if (newPosition[0] + newWidth/2 > gridSize) {
-            newWidth = (gridSize - newPosition[0]) * 2
-            newPosition[0] = gridSize - newWidth/2
+          // Right edge must be <= gridWidth
+          if (newPosition[0] + newWidth/2 > gridWidth) {
+            newWidth = (gridWidth - newPosition[0]) * 2
+            newPosition[0] = gridWidth - newWidth/2
           }
           break
           
@@ -316,10 +318,10 @@ export const useFootprintManager = ({
           ]
           
           // Check grid constraints for bottom edge
-          // Bottom edge must be >= -gridSize
-          if (newPosition[2] + newDepth/2 < -gridSize) {
-            newDepth = (gridSize + newPosition[2]) * 2
-            newPosition[2] = -gridSize + newDepth/2
+          // Bottom edge must be >= -gridDepth
+          if (newPosition[2] + newDepth/2 < -gridDepth) {
+            newDepth = (gridDepth + newPosition[2]) * 2
+            newPosition[2] = -gridDepth + newDepth/2
           }
           break
           
@@ -524,8 +526,9 @@ export default function FootprintManager({
     console.log("Click position:", e.point)
     
     if (toolMode === 'layout') {
-      // Grid size (from grid components, which are 20x20)
-      const gridSize = 20;
+      // Grid size (from grid components, which are 40x20)
+      const gridWidth = 40;
+      const gridDepth = 20;
       
       // Check if click is within the grid bounds (positive x and z only, as walls are at 0)
       if (e.point.x < 0 || e.point.z > 0) {
@@ -538,8 +541,8 @@ export default function FootprintManager({
       const footprintDepth = 3;
       
       // Constrain position to ensure footprint stays fully in the grid
-      const constrainedX = Math.min(e.point.x, gridSize - footprintWidth/2);
-      const constrainedZ = Math.max(e.point.z, -gridSize + footprintDepth/2);
+      const constrainedX = Math.min(e.point.x, gridWidth - footprintWidth/2);
+      const constrainedZ = Math.max(e.point.z, -gridDepth + footprintDepth/2);
       
       // Create valid position
       const clickPosition: [number, number, number] = [
@@ -584,12 +587,12 @@ export default function FootprintManager({
       {/* Background plane for mouse interaction */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[10, -0.01, -10]} // Position in center of valid area (x=0-20, z=0-(-20))
+        position={[20, -0.01, -10]} // Position in center of valid area (x=0-40, z=0-(-20))
         receiveShadow
         name="background-plane"
         onClick={handlePlaneClick}
       >
-        <planeGeometry args={[20, 20]} /> {/* Match the 20x20 grid size */}
+        <planeGeometry args={[40, 20]} /> {/* Match the 40x20 grid size */}
         <meshStandardMaterial color="#f0f0f0" transparent opacity={0.2} />
       </mesh>
       
