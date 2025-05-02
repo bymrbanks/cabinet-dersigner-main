@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { Footprint, ResizeState } from './types'
@@ -32,7 +32,12 @@ export default function FootprintBox({
   const { id, position, width, depth, color = "#6495ED" } = footprint
   const boxColor = color
   const borderColor = isSelected ? "#FF4500" : "#4682B4"
-  const opacity = isSelected ? 0.6 : 0.4
+  const opacity = isSelected ? 0.8 : 0.6 // Increased opacity for better visibility
+  
+  // Log rendering of footprint for debugging
+  useEffect(() => {
+    console.log(`Rendering footprint ${id} at`, position, `width: ${width}, depth: ${depth}`);
+  }, [id, position, width, depth]);
   
   // Track which edge is being hovered
   const [hoveredEdge, setHoveredEdge] = useState<Edge>(null)
@@ -199,15 +204,15 @@ export default function FootprintBox({
       }}
     >
       {/* Main box */}
-      <mesh position={[0, 0.02, 0]}>
-        <boxGeometry args={[width, 0.02, depth]} />
+      <mesh position={[0, 0.05, 0]}>
+        <boxGeometry args={[width, 0.1, depth]} />
         <meshStandardMaterial color={boxColor} transparent opacity={opacity} />
       </mesh>
 
       {/* Border */}
-      <lineSegments position={[0, 0.025, 0]}>
-        <edgesGeometry args={[new THREE.BoxGeometry(width, 0.02, depth)]} />
-        <lineBasicMaterial color={borderColor} linewidth={2} />
+      <lineSegments position={[0, 0.11, 0]}>
+        <edgesGeometry args={[new THREE.BoxGeometry(width, 0.1, depth)]} />
+        <lineBasicMaterial color={borderColor} linewidth={3} />
       </lineSegments>
 
       {/* Edge highlights for resize */}
