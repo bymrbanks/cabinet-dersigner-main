@@ -9,22 +9,22 @@ import { usesCabinetTemplate, toolbarState } from "../ToolbarFloating";
 
 // Handler to convert from grid coordinate system (0,0 at corner) to world coordinate system (centered at origin)
 const gridToWorldPosition = (gridPos: [number, number, number], width: number, depth: number): [number, number, number] => {
-  // The grid is 20x20, centered at (0,0,0) in world space, so edges are at -10 and +10
-  // We want (0,0,0) in grid space to be at (-10,-10) in world space
+  // The grid is 108x108, centered at (0,0,0) in world space, so edges are at -54 and +54
+  // We want (0,0,0) in grid space to be at (-54,-54) in world space
   // And we want the coordinate to be at the corner of the footprint, not its center
   return [
-    gridPos[0] - 10 + width/2,  // x: 0 in grid = -10 in world, add half width to move origin from corner to center
+    gridPos[0] - 54 + width/2,  // x: 0 in grid = -54 in world, add half width to move origin from corner to center
     gridPos[1],                 // y stays the same
-    gridPos[2] - 10 + depth/2   // z: 0 in grid = -10 in world, add half depth to move origin from corner to center
+    gridPos[2] - 54 + depth/2   // z: 0 in grid = -54 in world, add half depth to move origin from corner to center
   ];
 };
 
 // Handler to convert from world coordinate system to grid coordinate system
 const worldToGridPosition = (worldPos: [number, number, number], width: number, depth: number): [number, number, number] => {
   return [
-    worldPos[0] + 10 - width/2,  // x: -10 in world = 0 in grid, subtract half width to move origin from center to corner
+    worldPos[0] + 54 - width/2,  // x: -54 in world = 0 in grid, subtract half width to move origin from center to corner
     worldPos[1],                 // y stays the same
-    worldPos[2] + 10 - depth/2   // z: -10 in world = 0 in grid, subtract half depth to move origin from center to corner
+    worldPos[2] + 54 - depth/2   // z: -54 in world = 0 in grid, subtract half depth to move origin from center to corner
   ];
 };
 
@@ -264,14 +264,14 @@ export const useFootprintManager = ({
       const snappedGridX = Math.round(gridPosition[0] / gridUnit) * gridUnit;
       const snappedGridZ = Math.round(gridPosition[2] / gridUnit) * gridUnit;
       
-      // Apply grid constraints in grid space (from 0 to 20-width/depth)
+      // Apply grid constraints in grid space (from 0 to 108-width/depth)
       
       // Constrain grid position to keep the box within the grid boundaries
-      // X must be between 0 and 20-width
-      const constrainedGridX = Math.max(0, Math.min(20 - footprint.width, snappedGridX))
+      // X must be between 0 and 108-width
+      const constrainedGridX = Math.max(0, Math.min(108 - footprint.width, snappedGridX))
       
-      // Z must be between 0 and 20-depth
-      const constrainedGridZ = Math.max(0, Math.min(20 - footprint.depth, snappedGridZ))
+      // Z must be between 0 and 108-depth
+      const constrainedGridZ = Math.max(0, Math.min(108 - footprint.depth, snappedGridZ))
       
       // Convert back to world coordinates for Three.js
       const newWorldPosition = gridToWorldPosition(
@@ -317,8 +317,8 @@ export const useFootprintManager = ({
       let newHeight = resizeState.startDimensions.height
       let newPosition = [...resizeState.startBoxPosition] as [number, number, number]
       
-      // Grid constraints - grid is centered at origin, -10 to 10 in both x and z
-      const gridHalfSize = 10
+      // Grid constraints - grid is centered at origin, -54 to 54 in both x and z
+      const gridHalfSize = 54
       const minSize = 0.5 // Minimum box size
       
       // Single directional resizing based on the corner
@@ -649,7 +649,7 @@ export default function FootprintManager({
         name="background-plane"
         onClick={handlePlaneClick}
       >
-        <planeGeometry args={[20, 20]} /> {/* Match the grid size: 20x20 */}
+        <planeGeometry args={[108, 108]} /> {/* Match the grid size: 108x108 inches */}
         <meshStandardMaterial color="#f0f0f0" transparent opacity={0.2} />
       </mesh>
       

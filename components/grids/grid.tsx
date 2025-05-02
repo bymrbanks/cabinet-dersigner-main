@@ -10,8 +10,8 @@ interface GridProps {
 }
 
 export default function Grid({ 
-  size = 20, 
-  divisions = 20,
+  size = 108, 
+  divisions = 36,
   color = "#CCCCCC"
 }: GridProps) {
   // Create a simple grid helper

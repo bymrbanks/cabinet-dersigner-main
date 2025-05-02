@@ -10,20 +10,22 @@ interface BackWallGridProps {
 }
 
 export default function BackWallGrid({ 
-  size = 20, 
-  divisions = 20,
-  color = "#E0E0E0"
+  size = 108, 
+  divisions = 36,
+  color = "#CCCCCC"
 }: BackWallGridProps) {
-  const grid = useMemo(() => {
-    
+  // Create a custom grid for the back wall (XY plane)
+  const backWallGrid = useMemo(() => {
     try {
-      const gridGeometry = new THREE.PlaneGeometry(size, size, divisions, divisions)
+      // Create a grid geometry
+      const gridGeometry = new THREE.PlaneGeometry(size, size)
+      
+      // Create a grid material with a grid pattern
       const gridMaterial = new THREE.MeshBasicMaterial({
         color: color,
-        side: THREE.DoubleSide,
-        wireframe: true,
+        opacity: 0.2,
         transparent: true,
-        opacity: 0.5
+        wireframe: true,
       })
       
       return new THREE.Mesh(gridGeometry, gridMaterial)
@@ -31,9 +33,9 @@ export default function BackWallGrid({
       console.error("Error creating back wall grid:", error)
       return null
     }
-  }, [size, divisions, color])
+  }, [size, color])
 
-  if (!grid) return null
+  if (!backWallGrid) return null
 
-  return <primitive object={grid} position={[0, size/2, -size/2]} rotation={[0, 0, 0]} />
+  return <primitive object={backWallGrid} position={[0, size/2, -54]} rotation={[0, 0, 0]} />
 } 
