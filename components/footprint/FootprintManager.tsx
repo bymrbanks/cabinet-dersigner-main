@@ -5,23 +5,24 @@ import { Canvas } from '@react-three/fiber'
 import { Footprint, DragState, ResizeState, FootprintState, FootprintActions, FootprintManagerProps } from './types'
 import FootprintBox from './FootprintBox'
 
-// Handler to convert from grid coordinate system (0,0 at edge) to world coordinate system (centered at origin)
-const gridToWorldPosition = (gridPos: [number, number, number]): [number, number, number] => {
+// Handler to convert from grid coordinate system (0,0 at corner) to world coordinate system (centered at origin)
+const gridToWorldPosition = (gridPos: [number, number, number], width: number, depth: number): [number, number, number] => {
   // The grid is 20x20, centered at (0,0,0) in world space, so edges are at -10 and +10
   // We want (0,0,0) in grid space to be at (-10,-10) in world space
+  // And we want the coordinate to be at the corner of the footprint, not its center
   return [
-    gridPos[0] - 10, // x: 0 in grid = -10 in world
-    gridPos[1],      // y stays the same
-    gridPos[2] - 10  // z: 0 in grid = -10 in world
+    gridPos[0] - 10 + width/2,  // x: 0 in grid = -10 in world, add half width to move origin from corner to center
+    gridPos[1],                 // y stays the same
+    gridPos[2] - 10 + depth/2   // z: 0 in grid = -10 in world, add half depth to move origin from corner to center
   ];
 };
 
 // Handler to convert from world coordinate system to grid coordinate system
-const worldToGridPosition = (worldPos: [number, number, number]): [number, number, number] => {
+const worldToGridPosition = (worldPos: [number, number, number], width: number, depth: number): [number, number, number] => {
   return [
-    worldPos[0] + 10, // x: -10 in world = 0 in grid
-    worldPos[1],      // y stays the same
-    worldPos[2] + 10  // z: -10 in world = 0 in grid
+    worldPos[0] + 10 - width/2,  // x: -10 in world = 0 in grid, subtract half width to move origin from center to corner
+    worldPos[1],                 // y stays the same
+    worldPos[2] + 10 - depth/2   // z: -10 in world = 0 in grid, subtract half depth to move origin from center to corner
   ];
 };
 
@@ -66,6 +67,10 @@ export const useFootprintManager = ({
   
   // Add a new footprint
   const addFootprint = useCallback((gridPosition: [number, number, number], template?: Partial<Footprint>) => {
+    // Round dimensions to integers for better alignment
+    const width = template?.width ? Math.round(template.width) : 2;
+    const depth = template?.depth ? Math.round(template.depth) : 2;
+    
     // Ensure Y position is slightly above the floor for visibility
     const newGridPosition: [number, number, number] = [
       // Round to nearest integer for better grid alignment
@@ -75,11 +80,8 @@ export const useFootprintManager = ({
     ];
     
     // Convert grid position to world position for Three.js
-    const worldPosition = gridToWorldPosition(newGridPosition);
-    
-    // Round dimensions to integers for better alignment
-    const width = template?.width ? Math.round(template.width) : 2;
-    const depth = template?.depth ? Math.round(template.depth) : 2;
+    // The origin point in grid space is the corner of the footprint
+    const worldPosition = gridToWorldPosition(newGridPosition, width, depth);
     
     const newFootprint: Footprint = {
       id: `footprint-${Date.now()}`,
@@ -92,8 +94,8 @@ export const useFootprintManager = ({
     }
     
     console.log("Creating new footprint:", newFootprint);
-    console.log("Grid position:", newGridPosition);
-    console.log("World position:", worldPosition);
+    console.log("Grid position (corner):", newGridPosition);
+    console.log("World position (center):", worldPosition);
     console.log("Current footprints count before adding:", footprints.length);
     
     // Create a new array with the new footprint to avoid mutation issues
@@ -239,8 +241,12 @@ export const useFootprintManager = ({
       let newWorldX = footprint.position[0] + deltaX
       let newWorldZ = footprint.position[2] + deltaZ
       
-      // Convert to grid coordinates (0,0 at edge)
-      const gridPosition = worldToGridPosition([newWorldX, footprint.position[1], newWorldZ])
+      // Convert to grid coordinates (0,0 at corner)
+      const gridPosition = worldToGridPosition(
+        [newWorldX, footprint.position[1], newWorldZ], 
+        footprint.width, 
+        footprint.depth
+      )
       
       // Grid unit size (assuming grid units of 1.0)
       const gridUnit = 1.0;
@@ -249,23 +255,21 @@ export const useFootprintManager = ({
       const snappedGridX = Math.round(gridPosition[0] / gridUnit) * gridUnit;
       const snappedGridZ = Math.round(gridPosition[2] / gridUnit) * gridUnit;
       
-      // Apply grid constraints in grid space (from 0 to 20)
-      const halfWidth = footprint.width / 2
-      const halfDepth = footprint.depth / 2
+      // Apply grid constraints in grid space (from 0 to 20-width/depth)
       
       // Constrain grid position to keep the box within the grid boundaries
-      // X must be between halfWidth and 20-halfWidth
-      const constrainedGridX = Math.max(halfWidth, Math.min(20 - halfWidth, snappedGridX))
+      // X must be between 0 and 20-width
+      const constrainedGridX = Math.max(0, Math.min(20 - footprint.width, snappedGridX))
       
-      // Z must be between halfDepth and 20-halfDepth
-      const constrainedGridZ = Math.max(halfDepth, Math.min(20 - halfDepth, snappedGridZ))
+      // Z must be between 0 and 20-depth
+      const constrainedGridZ = Math.max(0, Math.min(20 - footprint.depth, snappedGridZ))
       
       // Convert back to world coordinates for Three.js
-      const newWorldPosition = gridToWorldPosition([
-        constrainedGridX,
-        footprint.position[1],
-        constrainedGridZ
-      ])
+      const newWorldPosition = gridToWorldPosition(
+        [constrainedGridX, footprint.position[1], constrainedGridZ],
+        footprint.width,
+        footprint.depth
+      )
       
       // Update the footprint position
       updateFootprint(dragState.currentFootprint, { 
@@ -563,26 +567,24 @@ export default function FootprintManager({
     console.log("World click position:", e.point)
     
     if (toolMode === 'layout') {
-      // Convert world position to grid position (0,0 at edge)
-      const gridClickPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z]);
-      console.log("Grid click position (0,0 at edge):", gridClickPosition);
-      
-      // Grid unit size (assuming grid units of 1.0)
-      const gridUnit = 1.0;
-      
       // Make sure the footprint will fit in the grid
       const footprintWidth = 3;
       const footprintDepth = 3;
+      
+      // Convert world position to grid position (0,0 at corner)
+      const gridClickPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z], footprintWidth, footprintDepth);
+      console.log("Grid click position (0,0 at corner):", gridClickPosition);
+      
+      // Grid unit size (assuming grid units of 1.0)
+      const gridUnit = 1.0;
       
       // Round to nearest grid unit to ensure alignment
       const roundedGridX = Math.round(gridClickPosition[0] / gridUnit) * gridUnit;
       const roundedGridZ = Math.round(gridClickPosition[2] / gridUnit) * gridUnit;
       
-      // Constrain position in grid coordinates (0 to 20 in both x and z)
-      const constrainedGridX = Math.max(footprintWidth/2, 
-                          Math.min(20 - footprintWidth/2, roundedGridX));
-      const constrainedGridZ = Math.max(footprintDepth/2, 
-                          Math.min(20 - footprintDepth/2, roundedGridZ));
+      // Constrain position in grid coordinates (0 to 20-width/depth for the far edge)
+      const constrainedGridX = Math.max(0, Math.min(20 - footprintWidth, roundedGridX));
+      const constrainedGridZ = Math.max(0, Math.min(20 - footprintDepth, roundedGridZ));
       
       // Create valid grid position
       const finalGridPosition: [number, number, number] = [
@@ -591,7 +593,7 @@ export default function FootprintManager({
         constrainedGridZ
       ];
       
-      console.log("Creating new footprint at grid position:", finalGridPosition);
+      console.log("Creating new footprint at grid position (corner):", finalGridPosition);
       
       // Create a new footprint using grid coordinates
       const newId = actions.addFootprint(finalGridPosition, {
