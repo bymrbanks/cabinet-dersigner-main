@@ -54,14 +54,29 @@ export default function AttributesPanel({ footprint, updateFootprint }: Attribut
   const handlePositionChange = (axis: 'x' | 'z', value: number) => {
     if (!footprint) return
     
-    const newPosition: [number, number, number] = [...footprint.position]
+    // Create a new grid position based on the current one
+    // If gridPosition isn't available, calculate it from the world position
+    const currentGridPos = footprint.gridPosition || 
+      [footprint.position[0] + 10, footprint.position[1], footprint.position[2] + 10];
+    
+    const newGridPosition: [number, number, number] = [...currentGridPos] as [number, number, number];
     if (axis === 'x') {
-      newPosition[0] = value
+      newGridPosition[0] = value;
     } else if (axis === 'z') {
-      newPosition[2] = value
+      newGridPosition[2] = value;
     }
     
-    updateFootprint(footprint.id, { position: newPosition })
+    // Calculate the new world position
+    const newWorldPosition: [number, number, number] = [
+      newGridPosition[0] - 10, // Convert from grid to world
+      newGridPosition[1],
+      newGridPosition[2] - 10
+    ];
+    
+    updateFootprint(footprint.id, { 
+      position: newWorldPosition,
+      gridPosition: newGridPosition
+    });
   }
 
   const handleDimensionChange = (dimension: 'width' | 'depth', value: number) => {
@@ -135,7 +150,9 @@ export default function AttributesPanel({ footprint, updateFootprint }: Attribut
                     id="position-x"
                     className="bg-muted/40 h-9"
                     type="number"
-                    value={footprint.position[0].toFixed(2)}
+                    value={footprint.gridPosition 
+                      ? footprint.gridPosition[0].toFixed(2) 
+                      : (footprint.position[0] + 10).toFixed(2)}
                     onChange={(e) => handlePositionChange('x', parseFloat(e.target.value))}
                   />
                 </div>
@@ -147,7 +164,9 @@ export default function AttributesPanel({ footprint, updateFootprint }: Attribut
                     id="position-z"
                     className="bg-muted/40 h-9"
                     type="number"
-                    value={footprint.position[2].toFixed(2)}
+                    value={footprint.gridPosition 
+                      ? footprint.gridPosition[2].toFixed(2) 
+                      : (footprint.position[2] + 10).toFixed(2)}
                     onChange={(e) => handlePositionChange('z', parseFloat(e.target.value))}
                   />
                 </div>

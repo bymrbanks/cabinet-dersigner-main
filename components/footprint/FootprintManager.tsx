@@ -44,18 +44,42 @@ export const useFootprintManager = ({
     onFootprintsChange(updatedFootprints)
   }, [footprints, onFootprintsChange])
   
-  // Add a new footprint
-  const addFootprint = useCallback((position: [number, number, number], template?: Partial<Footprint>) => {
-    // Ensure Y position is slightly above the floor for visibility
-    const newPosition: [number, number, number] = [
-      position[0],
-      0.05, // Slightly elevated above floor (was 0.01)
-      position[2]
+  // Handler to convert from grid coordinate system (0,0 at edge) to world coordinate system (centered at origin)
+  const gridToWorldPosition = useCallback((gridPos: [number, number, number]): [number, number, number] => {
+    // The grid is 20x20, centered at (0,0,0) in world space, so edges are at -10 and +10
+    // We want (0,0,0) in grid space to be at (-10,-10) in world space
+    return [
+      gridPos[0] - 10, // x: 0 in grid = -10 in world
+      gridPos[1],      // y stays the same
+      gridPos[2] - 10  // z: 0 in grid = -10 in world
     ];
+  }, []);
+
+  // Handler to convert from world coordinate system to grid coordinate system
+  const worldToGridPosition = useCallback((worldPos: [number, number, number]): [number, number, number] => {
+    return [
+      worldPos[0] + 10, // x: -10 in world = 0 in grid
+      worldPos[1],      // y stays the same
+      worldPos[2] + 10  // z: -10 in world = 0 in grid
+    ];
+  }, []);
+  
+  // Add a new footprint
+  const addFootprint = useCallback((gridPosition: [number, number, number], template?: Partial<Footprint>) => {
+    // Ensure Y position is slightly above the floor for visibility
+    const newGridPosition: [number, number, number] = [
+      gridPosition[0],
+      0.05, // Slightly elevated above floor
+      gridPosition[2]
+    ];
+    
+    // Convert grid position to world position for Three.js
+    const worldPosition = gridToWorldPosition(newGridPosition);
     
     const newFootprint: Footprint = {
       id: `footprint-${Date.now()}`,
-      position: newPosition,
+      position: worldPosition, // Store in world coordinates for Three.js
+      gridPosition: newGridPosition, // Store original grid position for UI
       width: template?.width || 2,
       depth: template?.depth || 2,
       color: template?.color || "#6495ED",
@@ -63,6 +87,8 @@ export const useFootprintManager = ({
     }
     
     console.log("Creating new footprint:", newFootprint);
+    console.log("Grid position:", newGridPosition);
+    console.log("World position:", worldPosition);
     console.log("Current footprints count before adding:", footprints.length);
     
     // Create a new array with the new footprint to avoid mutation issues
@@ -73,7 +99,7 @@ export const useFootprintManager = ({
     onFootprintsChange(updatedFootprints);
     
     return newFootprint.id;
-  }, [footprints, onFootprintsChange])
+  }, [footprints, onFootprintsChange, gridToWorldPosition]);
   
   // Delete a footprint
   const deleteFootprint = useCallback((id: string) => {
@@ -200,33 +226,40 @@ export const useFootprintManager = ({
       const footprint = getFootprintById(dragState.currentFootprint)
       if (!footprint) return
       
-      // Calculate the delta
+      // Calculate the delta in world coordinates
       const deltaX = e.point.x - dragState.startPosition[0]
       const deltaZ = e.point.z - dragState.startPosition[2]
       
-      // Calculate new position
-      let newX = footprint.position[0] + deltaX
-      let newZ = footprint.position[2] + deltaZ
+      // Calculate new world position
+      let newWorldX = footprint.position[0] + deltaX
+      let newWorldZ = footprint.position[2] + deltaZ
       
-      // Apply grid constraints (centered grid from -10 to 10 in both dimensions)
-      const gridHalfSize = 10
+      // Convert to grid coordinates (0,0 at edge)
+      const gridPosition = worldToGridPosition([newWorldX, footprint.position[1], newWorldZ])
+      
+      // Apply grid constraints in grid space (from 0 to 20)
       const halfWidth = footprint.width / 2
       const halfDepth = footprint.depth / 2
       
-      // Constrain x position to keep the box within the grid boundaries
-      newX = Math.max(-gridHalfSize + halfWidth, Math.min(gridHalfSize - halfWidth, newX))
+      // Constrain grid position to keep the box within the grid boundaries
+      // X must be between halfWidth and 20-halfWidth
+      const constrainedGridX = Math.max(halfWidth, Math.min(20 - halfWidth, gridPosition[0]))
       
-      // Constrain z position to keep the box within the grid boundaries
-      newZ = Math.max(-gridHalfSize + halfDepth, Math.min(gridHalfSize - halfDepth, newZ))
+      // Z must be between halfDepth and 20-halfDepth
+      const constrainedGridZ = Math.max(halfDepth, Math.min(20 - halfDepth, gridPosition[2]))
+      
+      // Convert back to world coordinates for Three.js
+      const newWorldPosition = gridToWorldPosition([
+        constrainedGridX,
+        footprint.position[1],
+        constrainedGridZ
+      ])
       
       // Update the footprint position
-      const newPosition: [number, number, number] = [
-        newX,
-        footprint.position[1],
-        newZ
-      ]
-      
-      updateFootprint(dragState.currentFootprint, { position: newPosition })
+      updateFootprint(dragState.currentFootprint, { 
+        position: newWorldPosition,
+        gridPosition: [constrainedGridX, footprint.position[1], constrainedGridZ]
+      })
       
       // Update the start position for the next move
       setDragState(prev => ({
@@ -515,47 +548,43 @@ export default function FootprintManager({
     }
     
     console.log("Background plane clicked in mode:", toolMode)
-    console.log("Click position:", e.point)
+    console.log("World click position:", e.point)
     
     if (toolMode === 'layout') {
-      // Grid size (from grid.tsx, which is 20x20 centered at origin, so -10 to +10 in both directions)
-      const gridHalfSize = 10;
+      // Convert world position to grid position (0,0 at edge)
+      const gridClickPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z]);
+      console.log("Grid click position (0,0 at edge):", gridClickPosition);
       
       // Make sure the footprint will fit in the grid
       const footprintWidth = 3;
       const footprintDepth = 3;
       
-      // Constrain position to ensure footprint stays fully in the grid
-      // Limit x and z to ensure the footprint edges stay within the grid
-      const constrainedX = Math.max(-gridHalfSize + footprintWidth/2, 
-                            Math.min(gridHalfSize - footprintWidth/2, e.point.x));
-      const constrainedZ = Math.max(-gridHalfSize + footprintDepth/2, 
-                            Math.min(gridHalfSize - footprintDepth/2, e.point.z));
+      // Constrain position in grid coordinates (0 to 20 in both x and z)
+      const constrainedGridX = Math.max(footprintWidth/2, 
+                          Math.min(20 - footprintWidth/2, gridClickPosition[0]));
+      const constrainedGridZ = Math.max(footprintDepth/2, 
+                          Math.min(20 - footprintDepth/2, gridClickPosition[2]));
       
-      // Create valid position
-      const clickPosition: [number, number, number] = [constrainedX, 0, constrainedZ];
+      // Create valid grid position
+      const finalGridPosition: [number, number, number] = [
+        constrainedGridX, 
+        0, 
+        constrainedGridZ
+      ];
       
-      console.log("Creating new footprint at", clickPosition)
+      console.log("Creating new footprint at grid position:", finalGridPosition);
       
-      // Directly create the new footprint to ensure state is updated
-      const newFootprint: Footprint = {
-        id: `footprint-${Date.now()}`,
-        position: [clickPosition[0], 0.05, clickPosition[2]],
+      // Create a new footprint using grid coordinates
+      const newId = addFootprint(finalGridPosition, {
         width: footprintWidth,
         depth: footprintDepth,
-        color: "#FF5733",
-        selected: true
-      }
+        color: "#FF5733"
+      });
       
-      console.log("Created new footprint:", newFootprint)
+      console.log("Created new footprint with ID:", newId);
       
-      // Directly update footprints in parent component
-      const updatedFootprints = [...footprints, newFootprint]
-      console.log("Directly updating footprints array:", updatedFootprints.length)
-      onFootprintsChange(updatedFootprints)
-      
-      // Then select it
-      onSelectFootprint(newFootprint.id)
+      // Select it
+      onSelectFootprint(newId);
     } else {
       console.log("Not in layout mode, deselecting footprint")
       // In select mode, deselect the current footprint

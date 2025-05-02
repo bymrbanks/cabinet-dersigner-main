@@ -2,7 +2,8 @@ import { MutableRefObject } from 'react'
 
 export interface Footprint {
   id: string
-  position: [number, number, number]
+  position: [number, number, number]  // World position (for Three.js)
+  gridPosition?: [number, number, number]  // Grid position (where 0,0 is the edge)
   width: number
   depth: number
   color?: string
