@@ -7,9 +7,26 @@ declare global {
   namespace JSX {
     interface IntrinsicElements {
       // Basic Three.js elements
-      mesh: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { [key: string]: any };
-      lineSegments: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { [key: string]: any };
-      group: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { [key: string]: any };
+      mesh: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
+        [key: string]: any;
+        position?: [number, number, number];
+        rotation?: [number, number, number];
+        onClick?: (event: any) => void;
+        onPointerDown?: (event: any) => void;
+        onPointerUp?: (event: any) => void;
+        onPointerMove?: (event: any) => void;
+        onDoubleClick?: (event: any) => void;
+      };
+      lineSegments: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
+        [key: string]: any;
+        position?: [number, number, number];
+      };
+      group: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
+        [key: string]: any;
+        position?: [number, number, number];
+        onClick?: (event: any) => void;
+        onDoubleClick?: (event: any) => void;
+      };
       
       // Geometries
       boxGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { args?: any[] };
@@ -57,19 +74,35 @@ declare global {
   }
 }
 
-// Extend Three.js types
-declare module 'three' {
-  interface Object3D {
+// Three.js types
+declare namespace THREE {
+  class WebGLRenderer {}
+  class Scene {}
+  class Camera {}
+  class Raycaster {
+    constructor();
+  }
+  class Vector2 {
+    constructor();
+    set(x: number, y: number): Vector2;
+  }
+  class Vector3 {}
+  class Group {}
+  class BoxGeometry {
+    constructor(width: number, height: number, depth: number);
+  }
+  class Object3D {
     userData: {
       [key: string]: any;
     };
+    parent: Object3D | null;
   }
   
   interface Event {
     stopPropagation: () => void;
-    delta: THREE.Vector3;
-    point: THREE.Vector3;
-    object: THREE.Object3D;
+    delta: Vector3;
+    point: Vector3;
+    object: Object3D;
   }
 }
 
