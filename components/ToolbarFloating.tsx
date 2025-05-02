@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface ToolbarButtonProps {
   icon: React.ReactNode
@@ -44,6 +46,8 @@ export interface ToolbarState {
   toolMode: ToolMode
   setToolMode: (mode: ToolMode) => void
   listeners: Array<(mode: ToolMode) => void>
+  defaultHeight: number
+  setDefaultHeight: (height: number) => void
 }
 
 // Create a central store for toolbar state
@@ -66,12 +70,22 @@ export let toolbarState: ToolbarState = {
       });
     }
   },
-  listeners: [] as Array<(mode: ToolMode) => void>
+  listeners: [] as Array<(mode: ToolMode) => void>,
+  defaultHeight: 2,
+  setDefaultHeight: (height: number) => {
+    console.log("Setting default height to", height);
+    toolbarState.defaultHeight = height;
+  }
 }
 
 // Function to get the current tool mode without using hooks
 export const getCurrentToolMode = (): ToolMode => {
   return toolbarState.toolMode;
+}
+
+// Function to get the default footprint height
+export const getDefaultFootprintHeight = (): number => {
+  return toolbarState.defaultHeight;
 }
 
 // Function to subscribe to toolbar state changes
@@ -103,6 +117,37 @@ export function useToolbarState(onChange: (mode: ToolMode) => void) {
   }
 }
 
+// Layout settings panel component
+const LayoutSettingsPanel: React.FC = () => {
+  const [height, setHeight] = useState(toolbarState.defaultHeight);
+  
+  const handleHeightChange = (newHeight: number) => {
+    setHeight(newHeight);
+    toolbarState.setDefaultHeight(newHeight);
+  };
+  
+  return (
+    <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10 bg-white rounded-lg shadow-lg p-3 w-64">
+      <div className="text-sm font-medium mb-2">Layout Settings</div>
+      <div className="space-y-2">
+        <div>
+          <Label htmlFor="default-height" className="text-xs">Default Height</Label>
+          <Input
+            id="default-height"
+            type="number"
+            value={height}
+            onChange={(e) => handleHeightChange(parseFloat(e.target.value) || 1)}
+            min={0.5}
+            max={10}
+            step={0.5}
+            className="h-8"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ToolbarFloating: React.FC = () => {
   const [activeToolMode, setActiveToolMode] = useState<ToolMode>('select')
   
@@ -118,121 +163,124 @@ const ToolbarFloating: React.FC = () => {
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 bg-white rounded-full shadow-lg py-2 px-2 flex items-center space-x-1">
-      {/* Arrow/Selection tool */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M5 5L10 15L12 10L17 12L5 5Z"
-              fill="#3B82F6"
-              stroke="#3B82F6"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        }
-        hasDropdown
-        isActive={activeToolMode === 'select'}
-        onClick={() => handleToolModeChange('select')}
-        tooltip="Selection Tool (Esc)"
-      />
+    <>
+      {activeToolMode === 'layout' && <LayoutSettingsPanel />}
+      
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 bg-white rounded-full shadow-lg py-2 px-2 flex items-center space-x-1">
+        {/* Arrow/Selection tool */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M5 5L10 15L12 10L17 12L5 5Z"
+                fill="#3B82F6"
+                stroke="#3B82F6"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          hasDropdown
+          isActive={activeToolMode === 'select'}
+          onClick={() => handleToolModeChange('select')}
+          tooltip="Selection Tool (Esc)"
+        />
 
-      {/* Grid tool */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M9 3H3V9H9V3Z M21 3H15V9H21V3Z M9 15H3V21H9V15Z M21 15H15V21H21V15Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        }
-        hasDropdown
-        tooltip="Grid Settings"
-      />
+        {/* Grid tool */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M9 3H3V9H9V3Z M21 3H15V9H21V3Z M9 15H3V21H9V15Z M21 15H15V21H21V15Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          hasDropdown
+          tooltip="Grid Settings"
+        />
 
-      {/* Square/Rectangle tool - Layout Mode */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="4" y="4" width="16" height="16" rx="1" stroke={activeToolMode === 'layout' ? "#3B82F6" : "currentColor"} strokeWidth="1.5" />
-            {activeToolMode === 'layout' && <rect x="7" y="7" width="10" height="10" fill="#3B82F6" fillOpacity="0.2" />}
-          </svg>
-        }
-        hasDropdown
-        isActive={activeToolMode === 'layout'}
-        onClick={() => handleToolModeChange('layout')}
-        tooltip={activeToolMode === 'layout' ? "Click on floor to add boxes (Esc to exit)" : "Layout Mode - Draw Floor Boxes"}
-      />
+        {/* Square/Rectangle tool - Layout Mode */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="4" width="16" height="16" rx="1" stroke={activeToolMode === 'layout' ? "#3B82F6" : "currentColor"} strokeWidth="1.5" />
+              {activeToolMode === 'layout' && <rect x="7" y="7" width="10" height="10" fill="#3B82F6" fillOpacity="0.2" />}
+            </svg>
+          }
+          hasDropdown
+          isActive={activeToolMode === 'layout'}
+          onClick={() => handleToolModeChange('layout')}
+          tooltip={activeToolMode === 'layout' ? "Click on floor to add boxes (Esc to exit)" : "Layout Mode - Draw Floor Boxes"}
+        />
 
-      {/* Shape/Draw tool */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 4C7 4 3 8 3 13C3 18 7 20 12 20C17 20 21 18 21 13C21 8 17 4 12 4Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        }
-        hasDropdown
-        tooltip="Shape Tools"
-      />
+        {/* Shape/Draw tool */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 4C7 4 3 8 3 13C3 18 7 20 12 20C17 20 21 18 21 13C21 8 17 4 12 4Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          hasDropdown
+          tooltip="Shape Tools"
+        />
 
-      {/* Text tool */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M4 6H20M12 6V18M7 18H17"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        }
-        tooltip="Text Tool"
-      />
+        {/* Text tool */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M4 6H20M12 6V18M7 18H17"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          tooltip="Text Tool"
+        />
 
-      {/* Edit tool */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="12" cy="12" r="3" fill="#EF4444" />
-          </svg>
-        }
-        hasDropdown
-        tooltip="Edit Options"
-      />
+        {/* Edit tool */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+              <circle cx="12" cy="12" r="3" fill="#EF4444" />
+            </svg>
+          }
+          hasDropdown
+          tooltip="Edit Options"
+        />
 
-      {/* Components tool */}
-      <ToolbarButton
-        icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 4L20 8.5V15.5L12 20L4 15.5V8.5L12 4Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path d="M12 12L20 8M12 12V20M12 12L4 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        }
-        tooltip="Components"
-      />
-
-    </div>
+        {/* Components tool */}
+        <ToolbarButton
+          icon={
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M12 4L20 8.5V15.5L12 20L4 15.5V8.5L12 4Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path d="M12 12L20 8M12 12V20M12 12L4 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          }
+          tooltip="Components"
+        />
+      </div>
+    </>
   )
 }
 

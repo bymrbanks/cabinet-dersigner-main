@@ -79,7 +79,7 @@ export default function AttributesPanel({ footprint, updateFootprint }: Attribut
     });
   }
 
-  const handleDimensionChange = (dimension: 'width' | 'depth', value: number) => {
+  const handleDimensionChange = (dimension: 'width' | 'depth' | 'height', value: number) => {
     if (!footprint) return
     updateFootprint(footprint.id, { [dimension]: value })
   }
@@ -207,7 +207,7 @@ export default function AttributesPanel({ footprint, updateFootprint }: Attribut
               <Label className="text-xs text-muted-foreground mb-2 block">
                 Dimensions
               </Label>
-              <div className="grid grid-cols-2 gap-2 items-center">
+              <div className="grid grid-cols-3 gap-2 items-center">
                 <div>
                   <Label htmlFor="width" className="text-xs mb-1.5 block">
                     W
@@ -230,6 +230,18 @@ export default function AttributesPanel({ footprint, updateFootprint }: Attribut
                     type="number"
                     value={footprint.depth.toFixed(2)}
                     onChange={(e) => handleDimensionChange('depth', parseFloat(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="height" className="text-xs mb-1.5 block">
+                    H
+                  </Label>
+                  <Input
+                    id="height"
+                    className="bg-muted/40 h-9"
+                    type="number"
+                    value={(footprint.height || 1).toFixed(2)}
+                    onChange={(e) => handleDimensionChange('height', parseFloat(e.target.value))}
                   />
                 </div>
               </div>

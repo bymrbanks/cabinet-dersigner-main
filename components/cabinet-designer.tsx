@@ -6,7 +6,7 @@ import { Suspense, useEffect, useRef, useState, useCallback, createContext } fro
 import Grid from "./grids/grid"
 import SideWallGrid from "./grids/side-wall-grid"
 import BackWallGrid from "./grids/back-wall-grid"
-import { toolbarState, ToolMode } from "./ToolbarFloating"
+import { toolbarState, ToolMode, getDefaultFootprintHeight } from "./ToolbarFloating"
 import ToolbarFloating, { useToolbarState } from "./ToolbarFloating"
 import { useBlankStore } from "@/store/blank-store"
 import { useThree } from "@react-three/fiber"
@@ -235,6 +235,7 @@ function SceneContent({
         onSelectFootprint={setSelectedFootprintId}
         footprints={footprints}
         selectedFootprint={selectedFootprintId}
+        defaultHeight={getDefaultFootprintHeight()}
       />
 
       <OrbitControls
