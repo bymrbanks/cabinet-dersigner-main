@@ -46,19 +46,33 @@ export const useFootprintManager = ({
   
   // Add a new footprint
   const addFootprint = useCallback((position: [number, number, number], template?: Partial<Footprint>) => {
+    // Ensure Y position is slightly above the floor for visibility
+    const newPosition: [number, number, number] = [
+      position[0],
+      0.05, // Slightly elevated above floor (was 0.01)
+      position[2]
+    ];
+    
     const newFootprint: Footprint = {
       id: `footprint-${Date.now()}`,
-      position,
+      position: newPosition,
       width: template?.width || 2,
       depth: template?.depth || 2,
       color: template?.color || "#6495ED",
       selected: false
     }
     
-    console.log("Creating new footprint:", newFootprint)
+    console.log("Creating new footprint:", newFootprint);
+    console.log("Current footprints count before adding:", footprints.length);
     
-    onFootprintsChange([...footprints, newFootprint])
-    return newFootprint.id
+    // Create a new array with the new footprint to avoid mutation issues
+    const updatedFootprints = [...footprints, newFootprint];
+    console.log("Updated footprints count:", updatedFootprints.length);
+    
+    // Directly apply the state update
+    onFootprintsChange(updatedFootprints);
+    
+    return newFootprint.id;
   }, [footprints, onFootprintsChange])
   
   // Delete a footprint
@@ -506,10 +520,28 @@ export default function FootprintManager({
     
     if (toolMode === 'layout') {
       // Add a new box at the click position
-      console.log("Creating new footprint at", e.point.x, e.point.z)
-      const newId = actions.addFootprint([e.point.x, 0.01, e.point.z])
-      console.log("Created new footprint with ID:", newId)
-      actions.selectFootprint(newId)
+      const clickPosition: [number, number, number] = [e.point.x, 0, e.point.z];
+      console.log("Creating new footprint at", clickPosition)
+      
+      // Directly create the new footprint to ensure state is updated
+      const newFootprint: Footprint = {
+        id: `footprint-${Date.now()}`,
+        position: [clickPosition[0], 0.05, clickPosition[2]],
+        width: 3,
+        depth: 3,
+        color: "#FF5733",
+        selected: true
+      }
+      
+      console.log("Created new footprint:", newFootprint)
+      
+      // Directly update footprints in parent component
+      const updatedFootprints = [...footprints, newFootprint]
+      console.log("Directly updating footprints array:", updatedFootprints.length)
+      onFootprintsChange(updatedFootprints)
+      
+      // Then select it
+      onSelectFootprint(newFootprint.id)
     } else {
       console.log("Not in layout mode, deselecting footprint")
       // In select mode, deselect the current footprint

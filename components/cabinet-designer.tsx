@@ -34,6 +34,11 @@ export default function CabinetDesigner() {
   const [footprints, setFootprints] = useState<Footprint[]>([])
   const [selectedFootprintId, setSelectedFootprintId] = useState<string | null>(null)
 
+  // Log footprints state changes at the top level
+  useEffect(() => {
+    console.log("CabinetDesigner: Footprints state updated:", footprints.length)
+  }, [footprints])
+
   // Callback to update a footprint
   const updateFootprint = useCallback((id: string, updates: Partial<Footprint>) => {
     setFootprints(prevFootprints =>
@@ -41,6 +46,12 @@ export default function CabinetDesigner() {
         fp.id === id ? { ...fp, ...updates } : fp
       )
     )
+  }, [])
+  
+  // Create a wrapped setFootprints function that logs updates
+  const handleSetFootprints = useCallback((newFootprints: Footprint[]) => {
+    console.log("Setting footprints:", newFootprints.length)
+    setFootprints(newFootprints)
   }, [])
 
   // Initialize history on first render
@@ -76,7 +87,7 @@ export default function CabinetDesigner() {
               <SceneContent 
                 footprints={footprints}
                 selectedFootprintId={selectedFootprintId}
-                setFootprints={setFootprints}
+                setFootprints={handleSetFootprints}
                 setSelectedFootprintId={setSelectedFootprintId}
               />
             </Suspense>
@@ -114,6 +125,18 @@ function SceneContent({
   const [cursor, setCursor] = useState<string>("auto")
   
   const { setSelectedPart } = useBlankStore()
+  
+  // Log when footprints change
+  useEffect(() => {
+    console.log("SceneContent: Footprints updated:", footprints.length);
+    footprints.forEach(fp => console.log(" - Footprint:", fp.id, fp.position));
+  }, [footprints]);
+  
+  // Function to safely update footprints
+  const updateFootprintsArray = useCallback((newFootprints: Footprint[]) => {
+    console.log("SceneContent: Updating footprints array:", newFootprints.length);
+    setFootprints(newFootprints);
+  }, [setFootprints]);
   
   // Handle toolbar mode changes
   const handleToolModeChange = useCallback((mode: ToolMode) => {
@@ -199,7 +222,7 @@ function SceneContent({
         orbitControlsRef={orbitControlsRef}
         toolMode={toolMode}
         setCursor={setCursor}
-        onFootprintsChange={setFootprints}
+        onFootprintsChange={updateFootprintsArray}
         onSelectFootprint={setSelectedFootprintId}
         footprints={footprints}
         selectedFootprint={selectedFootprintId}
