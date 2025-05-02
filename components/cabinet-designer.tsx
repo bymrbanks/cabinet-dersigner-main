@@ -12,6 +12,7 @@ import { useBlankStore } from "@/store/blank-store"
 import { useThree } from "@react-three/fiber"
 import FootprintManager from "./footprint/FootprintManager"
 import AttributesPanel from "./footprint/AttributesPanel"
+import Outliner from "./footprint/Outliner"
 import { Footprint } from "./footprint/types"
 
 // Create a context for sharing footprint data between components
@@ -77,6 +78,14 @@ export default function CabinetDesigner() {
   return (
     <FootprintContext.Provider value={footprintContextValue}>
       <div className="relative w-full h-full flex">
+        {/* Outliner panel on the left */}
+        <Outliner 
+          footprints={footprints}
+          selectedFootprintId={selectedFootprintId}
+          onSelectFootprint={setSelectedFootprintId}
+          onUpdateFootprint={updateFootprint}
+        />
+        
         {/* Main canvas area */}
         <div className="flex-1 relative">
           {/* Floating toolbar */}

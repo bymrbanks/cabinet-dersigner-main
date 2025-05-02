@@ -29,10 +29,15 @@ export default function FootprintBox({
   toolMode,
   setCursor
 }: FootprintBoxProps) {
-  const { id, position, width, depth, color = "#6495ED" } = footprint
+  const { id, position, width, depth, color = "#6495ED", visible } = footprint
   const boxColor = color
   const borderColor = isSelected ? "#FF4500" : "#4682B4"
   const opacity = isSelected ? 0.8 : 0.6 // Increased opacity for better visibility
+  
+  // If footprint is explicitly set to not visible, don't render it
+  if (visible === false) {
+    return null;
+  }
   
   // Log rendering of footprint for debugging
   useEffect(() => {

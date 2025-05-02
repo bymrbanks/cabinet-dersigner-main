@@ -8,6 +8,7 @@ export interface Footprint {
   depth: number
   color?: string
   selected?: boolean
+  visible?: boolean  // Whether the footprint is visible
 }
 
 export type DragState = {
