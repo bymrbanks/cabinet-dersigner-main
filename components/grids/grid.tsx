@@ -1,25 +1,23 @@
 "use client"
 
 import { useMemo } from "react"
-import { useCabinetStore } from "@/store/cabinet-store"
 import * as THREE from "three"
 
 interface GridProps {
   size?: number
   divisions?: number
+  color?: string
 }
 
-export default function Grid({ size = 20, divisions = 20 }: GridProps) {
-  const { gridVisible, gridSize, gridColor } = useCabinetStore()
-
-  // Calculate actual grid size based on store settings
-  const actualSize = gridSize * size
-  const actualDivisions = gridSize * divisions
-
+export default function Grid({ 
+  size = 20, 
+  divisions = 20,
+  color = "#CCCCCC"
+}: GridProps) {
   // Create a simple grid helper
   const grid = useMemo(() => {
     try {
-      const grid = new THREE.GridHelper(actualSize, actualDivisions, gridColor, gridColor)
+      const grid = new THREE.GridHelper(size, divisions, color, color)
 
       // Make the grid semi-transparent
       if (grid.material) {
@@ -33,9 +31,9 @@ export default function Grid({ size = 20, divisions = 20 }: GridProps) {
       console.error("Error creating grid:", error)
       return null
     }
-  }, [actualSize, actualDivisions, gridColor])
+  }, [size, divisions, color])
 
-  if (!gridVisible || !grid) return null
+  if (!grid) return null
 
   return <primitive object={grid} position={[0, 0.01, 0]} />
 }

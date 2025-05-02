@@ -1,31 +1,34 @@
 "use client"
 
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment, ContactShadows } from "@react-three/drei"
+import { OrbitControls, Environment, Text } from "@react-three/drei"
 import { Suspense, useEffect, useRef, useState } from "react"
-import Cabinet from "./cabinet/cabinet"
-import Grid from "./cabinet/grid"
-import TransformControls from "./cabinet/transform-controls"
-import { useCabinetStore } from "@/store/cabinet-store"
+import Grid from "./grids/grid"
+import SideWallGrid from "./grids/side-wall-grid"
+import BackWallGrid from "./grids/back-wall-grid"
+import FootprintManager, { Footprint } from "./cabinet/FootprintManager"
+import { useBlankStore } from "@/store/blank-store"
 import ToolbarFloating from "./ToolbarFloating"
 
 function Scene() {
   const orbitControlsRef = useRef<any>(null)
-  const {
-    cabinets,
-    selectedPart,
-    setSelectedPart,
-    addCabinet,
-    snapToGrid,
-  } = useCabinetStore()
+  const { setSelectedPart } = useBlankStore()
+  const [showFootprintEditor, setShowFootprintEditor] = useState(false)
+  const [footprints, setFootprints] = useState<Footprint[]>([])
 
-  // Handle background click to deselect
+  // Handle background click
   const handleBackgroundClick = (e: any) => {
     // Only handle direct background clicks
     if (e.object.name !== "background-plane") return
 
     // Deselect current selection
     setSelectedPart(null)
+  }
+
+  // Handle footprints change
+  const handleFootprintsChange = (updatedFootprints: Footprint[]) => {
+    setFootprints(updatedFootprints)
+    // Here you could add logic to convert footprints to actual cabinets or other objects
   }
 
   return (
@@ -36,49 +39,17 @@ function Scene() {
         position={[10, 10, 5]}
         intensity={1}
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
       />
       <Environment preset="apartment" />
-      <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={20} blur={2} far={4} resolution={256} />
 
-      {/* Grid */}
+      {/* Floor Grid */}
       <Grid />
+      
+      {/* Wall Grids */}
+      <SideWallGrid />
+      <BackWallGrid />
 
-      {/* Render all cabinets */}
-      {cabinets &&
-        cabinets.map((cabinet) => {
-          if (!cabinet) return null
-          return (
-            <Cabinet
-              key={cabinet.id}
-              id={cabinet.id}
-              position={cabinet.position || [0, 0, 0]}
-              width={Math.max(1, cabinet.width || 0)}
-              height={Math.max(1, cabinet.height || 0)}
-              depth={Math.max(1, cabinet.depth || 0)}
-              type={cabinet.type || "base"}
-              rotation={cabinet.rotation || 0}
-              compartments={(cabinet.compartments || []).map((compartment) => ({
-                ...compartment,
-                sections: (compartment?.sections || []).map((section) => ({
-                  ...section,
-                  type: section?.type || "door",
-                  height: Math.max(1, section?.height || 0),
-                })),
-              }))}
-              materialColor={cabinet.materialColor || "#D1D5DB"}
-            />
-          )
-        })}
-
-      {/* Transform controls for selected objects */}
-      <TransformControls />
-
-      {/* Background plane for deselection */}
+      {/* Background plane for mouse interaction */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.01, 0]}
@@ -89,6 +60,31 @@ function Scene() {
         <planeGeometry args={[100, 100]} />
         <shadowMaterial transparent opacity={0.2} />
       </mesh>
+      
+      {/* Footprint Editor */}
+      {showFootprintEditor && (
+        <FootprintManager onFootprintsChange={handleFootprintsChange} />
+      )}
+
+      {/* Footprint Editor Toggle Button */}
+      <group position={[9, 0.1, 9]}>
+        <mesh 
+          position={[0, 0, 0]} 
+          onClick={() => setShowFootprintEditor(!showFootprintEditor)}
+        >
+          <boxGeometry args={[2, 0.1, 0.5]} />
+          <meshStandardMaterial color={showFootprintEditor ? "#E91E63" : "#3F51B5"} />
+        </mesh>
+        <Text
+          position={[0, 0.15, 0]}
+          fontSize={0.15}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {showFootprintEditor ? "Exit Layout Mode" : "Enter Layout Mode"}
+        </Text>
+      </group>
 
       <OrbitControls
         ref={orbitControlsRef}
@@ -104,29 +100,15 @@ function Scene() {
 }
 
 export default function CabinetDesigner() {
-  const {
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    showDimensionLines,
-    setShowDimensionLines,
-    gridVisible,
-    setGridVisible,
-    snapToGrid,
-    setSnapToGrid,
-    setSelectedPart,
-  } = useCabinetStore()
+  const { setSelectedPart } = useBlankStore()
 
   // Initialize history on first render
   useEffect(() => {
     try {
-      useCabinetStore.getState().saveToHistory()
-
-      // Reset selected part on initial load to avoid TransformControls errors
+      // Reset selected part on initial load
       setSelectedPart(null)
     } catch (error) {
-      console.error("Error initializing history:", error)
+      console.error("Error initializing:", error)
     }
   }, [])
 

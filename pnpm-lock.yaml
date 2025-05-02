@@ -98,6 +98,9 @@ importers:
       '@react-three/fiber':
         specifier: latest
         version: 9.1.2(f64344f47c8620b92fe7c1e42edf083e)
+      '@types/three':
+        specifier: ^0.176.0
+        version: 0.176.0
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.0.0)
