@@ -10,6 +10,7 @@ export interface Footprint {
   color?: string
   selected?: boolean
   visible?: boolean  // Whether the footprint is visible
+  compartmentWidthThreshold?: number // The width threshold for creating new compartments
 }
 
 export type DragState = {

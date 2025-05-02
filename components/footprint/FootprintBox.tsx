@@ -245,6 +245,7 @@ export default function FootprintBox({
         height={height}
         depth={depth}
         color={boxColor}
+        compartmentWidthThreshold={12} // 12 inches threshold for compartments
       />
 
       {/* Border highlighting the footprint */}

@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { Mesh } from 'three';
 import { useFrame } from '@react-three/fiber';
+import Compartment from './Compartment';
+import { generateCompartments } from './CabinetTemplate';
 
 export interface CabinetCarcassProps {
   position?: [number, number, number];
@@ -8,6 +10,7 @@ export interface CabinetCarcassProps {
   height?: number;
   depth?: number;
   color?: string;
+  compartmentWidthThreshold?: number;
 }
 
 export default function CabinetCarcass({
@@ -16,6 +19,7 @@ export default function CabinetCarcass({
   height = 30,
   depth = 24,
   color = '#E0C9A6',
+  compartmentWidthThreshold = 24,
 }: CabinetCarcassProps) {
   const groupRef = useRef<any>(null);
 
@@ -27,6 +31,9 @@ export default function CabinetCarcass({
   const halfWidth = width / 2;
   const halfDepth = depth / 2;
   const halfHeight = height / 2;
+
+  // Generate the compartments based on width
+  const compartments = generateCompartments(width, compartmentWidthThreshold);
 
   return (
     <group ref={groupRef} position={position}>
@@ -65,6 +72,20 @@ export default function CabinetCarcass({
         <boxGeometry args={[width - thickness*2, thickness, depth/2]} />
         <meshStandardMaterial color={color} />
       </mesh>
+
+      {/* Render compartments */}
+      {compartments.map(({ index, xOffset, width: compartmentWidth }) => (
+        <Compartment
+          key={index}
+          index={index}
+          xOffset={xOffset}
+          width={compartmentWidth - thickness} // Account for divider thickness
+          height={height}
+          depth={depth}
+          color={color}
+          thickness={thickness}
+        />
+      ))}
     </group>
   );
 } 

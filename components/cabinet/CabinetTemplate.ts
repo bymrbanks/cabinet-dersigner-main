@@ -1,5 +1,15 @@
 import { Footprint } from "../footprint/types";
 
+export interface CompartmentConfig {
+  sections: SectionConfig[];
+}
+
+export interface SectionConfig {
+  type: "drawer" | "door";
+  height: number;
+  offsetY?: number;
+}
+
 export interface CabinetTemplate {
   name: string;
   description: string;
@@ -7,6 +17,7 @@ export interface CabinetTemplate {
   defaultHeight: number;
   defaultDepth: number;
   color: string;
+  compartmentWidthThreshold: number;
 }
 
 // Basic cabinet carcass template
@@ -17,6 +28,7 @@ export const cabinetCarcassTemplate: CabinetTemplate = {
   defaultHeight: 30,
   defaultDepth: 24,
   color: "#E0C9A6", // Light wood color
+  compartmentWidthThreshold: 24, // 24 inches threshold for creating a new compartment
 };
 
 // Function to create a footprint from cabinet template
@@ -31,6 +43,18 @@ export function createCabinetFootprint(
     height: template.defaultHeight,
     color: template.color,
   };
+}
+
+// Function to generate compartments based on cabinet width
+export function generateCompartments(cabinetWidth: number, threshold: number = 24) {
+  const numCompartments = Math.max(1, Math.floor(cabinetWidth / threshold));
+  const compartmentWidth = cabinetWidth / numCompartments;
+
+  return Array.from({ length: numCompartments }).map((_, i) => ({
+    index: i,
+    xOffset: i * compartmentWidth - (cabinetWidth / 2) + (compartmentWidth / 2), // Center in the cabinet
+    width: compartmentWidth,
+  }));
 }
 
 // Additional cabinet templates can be added here
