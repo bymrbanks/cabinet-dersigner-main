@@ -13,7 +13,7 @@ interface FootprintBoxProps {
   isSelected: boolean
   onSelect: (e: any) => void
   onDelete: (e: any) => void
-  onDragStart: (e: any, id: string) => void
+  onDragStart: (e: any, id: string, isDuplicate: boolean) => void
   onResizeStart: (e: any, id: string, corner: ResizeState['corner']) => void
   toolMode: string
   setCursor: (cursor: string) => void
@@ -91,7 +91,7 @@ export default function FootprintBox({
     }
   }, [isSelected, toolMode, setCursor, width, depth, position])
   
-  // Handle pointer down to start resize
+  // Handle pointer down to start resize or drag
   const handlePointerDown = useCallback((e: any) => {
     if (!isSelected || toolMode !== 'select') return
     
@@ -120,9 +120,16 @@ export default function FootprintBox({
       
       onResizeStart(e, id, corner)
     } else {
-      onDragStart(e, id)
+      // Check if Alt/Option key is pressed for duplication
+      const isDuplicate = e.altKey || e.metaKey;
+      if (isDuplicate) {
+        setCursor("copy");
+        console.log("Duplicating footprint during drag");
+      }
+      
+      onDragStart(e, id, isDuplicate)
     }
-  }, [isSelected, toolMode, hoveredEdge, onResizeStart, onDragStart, id])
+  }, [isSelected, toolMode, hoveredEdge, onResizeStart, onDragStart, id, setCursor])
   
   // Create edge highlights for visual feedback
   const renderEdgeHighlights = useCallback(() => {

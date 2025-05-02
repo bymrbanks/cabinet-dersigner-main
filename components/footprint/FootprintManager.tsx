@@ -17,7 +17,8 @@ export const useFootprintManager = ({
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     startPosition: null,
-    currentFootprint: null
+    currentFootprint: null,
+    isDuplicate: false
   })
   
   const [resizeState, setResizeState] = useState<ResizeState>({
@@ -44,20 +45,20 @@ export const useFootprintManager = ({
   }, [])
   
   // Add a new footprint
-  const addFootprint = useCallback((position: [number, number, number]) => {
+  const addFootprint = useCallback((position: [number, number, number], template?: Partial<Footprint>) => {
     const newFootprint: Footprint = {
       id: `footprint-${Date.now()}`,
       position,
-      width: 2,
-      depth: 2,
-      color: "#6495ED",
+      width: template?.width || 2,
+      depth: template?.depth || 2,
+      color: template?.color || "#6495ED",
       selected: false
     }
     
     console.log("Creating new footprint:", newFootprint)
     
     setFootprints(prevFootprints => [...prevFootprints, newFootprint])
-    setSelectedFootprint(newFootprint.id)
+    return newFootprint.id
   }, [])
   
   // Delete a footprint
@@ -74,7 +75,7 @@ export const useFootprintManager = ({
   }, [])
   
   // Start dragging a footprint
-  const startDrag = useCallback((e: any, id: string) => {
+  const startDrag = useCallback((e: any, id: string, isDuplicate: boolean = false) => {
     e.stopPropagation()
     
     // Don't start dragging if we're in layout mode
@@ -82,22 +83,49 @@ export const useFootprintManager = ({
       return
     }
     
-    console.log("Starting drag for footprint:", id)
-    setSelectedFootprint(id)
+    console.log("Starting drag for footprint:", id, "Duplicate:", isDuplicate)
+    
+    let currentId = id;
+    
+    // If we're duplicating, create a new footprint based on the current one
+    if (isDuplicate) {
+      const sourceFootprint = getFootprintById(id);
+      if (sourceFootprint) {
+        // Create a duplicate with slight offset
+        const newPosition: [number, number, number] = [
+          sourceFootprint.position[0] + 0.5, 
+          sourceFootprint.position[1], 
+          sourceFootprint.position[2] + 0.5
+        ];
+        
+        // Create duplicate
+        currentId = addFootprint(newPosition, {
+          width: sourceFootprint.width,
+          depth: sourceFootprint.depth,
+          color: sourceFootprint.color
+        });
+        
+        console.log("Created duplicate footprint:", currentId);
+      }
+    }
+    
+    // Select the footprint we're now dragging (original or duplicate)
+    setSelectedFootprint(currentId)
     
     setDragState({
       isDragging: true,
       startPosition: [e.point.x, e.point.y, e.point.z],
-      currentFootprint: id
+      currentFootprint: currentId,
+      isDuplicate: isDuplicate
     })
     
-    setCursor("grabbing")
+    setCursor(isDuplicate ? "copy" : "grabbing")
     
     // Disable orbit controls during drag
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = false
     }
-  }, [toolMode, setCursor, orbitControlsRef])
+  }, [toolMode, setCursor, orbitControlsRef, getFootprintById, addFootprint])
   
   // Start resizing a footprint from a corner
   const startResize = useCallback((e: any, id: string, corner: ResizeState['corner']) => {
@@ -308,7 +336,8 @@ export const useFootprintManager = ({
       setDragState({
         isDragging: false,
         startPosition: null,
-        currentFootprint: null
+        currentFootprint: null,
+        isDuplicate: false
       })
       setCursor("grab")
     }
@@ -338,7 +367,8 @@ export const useFootprintManager = ({
     setDragState({
       isDragging: false,
       startPosition: null,
-      currentFootprint: null
+      currentFootprint: null,
+      isDuplicate: false
     })
     
     setResizeState({
@@ -376,7 +406,8 @@ export const useFootprintManager = ({
           setDragState({
             isDragging: false,
             startPosition: null,
-            currentFootprint: null
+            currentFootprint: null,
+            isDuplicate: false
           })
           setCursor("grab")
         }
