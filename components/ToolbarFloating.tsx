@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 
 interface ToolbarButtonProps {
@@ -52,8 +52,18 @@ export let toolbarState: ToolbarState = {
   setToolMode: (mode: ToolMode) => {
     console.log("Toolbar state: Setting mode to", mode);
     toolbarState.toolMode = mode
+    
+    // Notify all listeners
+    console.log(`Notifying ${toolbarState.listeners.length} listeners about mode change to ${mode}`);
     if (toolbarState.listeners.length > 0) {
-      toolbarState.listeners.forEach(listener => listener(mode))
+      toolbarState.listeners.forEach(listener => {
+        try {
+          listener(mode);
+          console.log("Successfully notified listener");
+        } catch (error) {
+          console.error("Error notifying listener:", error);
+        }
+      });
     }
   },
   listeners: [] as Array<(mode: ToolMode) => void>
@@ -67,9 +77,23 @@ export const getCurrentToolMode = (): ToolMode => {
 // Function to subscribe to toolbar state changes
 export function useToolbarState(onChange: (mode: ToolMode) => void) {
   React.useEffect(() => {
-    toolbarState.listeners.push(onChange)
+    console.log("Subscribing to toolbar state changes");
+    
+    // Immediately notify with current state
+    try {
+      onChange(toolbarState.toolMode);
+    } catch (error) {
+      console.error("Error notifying new listener with current state:", error);
+    }
+    
+    // Add to listeners
+    toolbarState.listeners.push(onChange);
+    console.log(`Now ${toolbarState.listeners.length} listeners registered`);
+    
     return () => {
-      toolbarState.listeners = toolbarState.listeners.filter(l => l !== onChange)
+      console.log("Unsubscribing from toolbar state changes");
+      toolbarState.listeners = toolbarState.listeners.filter(l => l !== onChange);
+      console.log(`Now ${toolbarState.listeners.length} listeners registered after unsubscribe`);
     }
   }, [onChange])
   
@@ -81,6 +105,11 @@ export function useToolbarState(onChange: (mode: ToolMode) => void) {
 
 const ToolbarFloating: React.FC = () => {
   const [activeToolMode, setActiveToolMode] = useState<ToolMode>('select')
+  
+  // Sync with global toolbar state on mount
+  useEffect(() => {
+    setActiveToolMode(toolbarState.toolMode)
+  }, [])
   
   const handleToolModeChange = (mode: ToolMode) => {
     console.log("Toolbar: Setting tool mode to", mode);

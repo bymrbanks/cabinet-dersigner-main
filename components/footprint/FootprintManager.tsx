@@ -502,12 +502,16 @@ export default function FootprintManager({
     }
     
     console.log("Background plane clicked in mode:", toolMode)
+    console.log("Click position:", e.point)
     
     if (toolMode === 'layout') {
       // Add a new box at the click position
+      console.log("Creating new footprint at", e.point.x, e.point.z)
       const newId = actions.addFootprint([e.point.x, 0.01, e.point.z])
+      console.log("Created new footprint with ID:", newId)
       actions.selectFootprint(newId)
     } else {
+      console.log("Not in layout mode, deselecting footprint")
       // In select mode, deselect the current footprint
       actions.selectFootprint(null)
     }

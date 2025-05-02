@@ -117,7 +117,7 @@ function SceneContent({
   
   // Handle toolbar mode changes
   const handleToolModeChange = useCallback((mode: ToolMode) => {
-    console.log("Tool mode changed to:", mode)
+    console.log("SceneContent: Tool mode changed to:", mode)
     setToolMode(mode)
     
     // When switching to layout mode, disable orbit controls
@@ -135,7 +135,21 @@ function SceneContent({
   }, [])
   
   // Subscribe to toolbar state changes
-  useToolbarState(handleToolModeChange)
+  const { currentMode } = useToolbarState(handleToolModeChange)
+  
+  // Force sync of local state with global toolbar state
+  useEffect(() => {
+    console.log("Syncing local state with toolbar state:", currentMode)
+    if (currentMode !== toolMode) {
+      setToolMode(currentMode)
+    }
+  }, [currentMode, toolMode])
+  
+  // Log when we render with different modes
+  useEffect(() => {
+    console.log("SceneContent rendering with toolMode:", toolMode)
+    console.log("Global toolbar state mode:", toolbarState.toolMode)
+  }, [toolMode])
   
   // Apply cursor style to the canvas
   useEffect(() => {
