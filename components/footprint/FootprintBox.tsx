@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { Footprint, ResizeState } from './types'
+import CabinetCarcass from '../cabinet/CabinetCarcass'
 
 // Define the edge types for single-direction resizing
 type Edge = 'top' | 'bottom' | 'left' | 'right' | 'height' | null;
@@ -237,20 +238,28 @@ export default function FootprintBox({
         onDelete(e)
       }}
     >
-      {/* Main box */}
-      <mesh position={[0, height/2 - 0.05, 0]}>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color={boxColor} transparent opacity={opacity} />
-      </mesh>
+      {/* Cabinet carcass */}
+      <CabinetCarcass
+        position={[0, 0, 0]}
+        width={width}
+        height={height}
+        depth={depth}
+        color={boxColor}
+      />
 
-      {/* Border */}
-      <lineSegments position={[0, height/2 - 0.05, 0]}>
+      {/* Border highlighting the footprint */}
+      <lineSegments position={[0, height/2, 0]}>
         <edgesGeometry args={[new THREE.BoxGeometry(width, height, depth)]} />
         <lineBasicMaterial color={borderColor} linewidth={3} />
       </lineSegments>
 
-      {/* Edge highlights for resize */}
-      {isSelected && renderEdgeHighlights()}
+      {/* Edge highlights for resize handles when selected */}
+      {renderEdgeHighlights()}
+      
+      {/* Debug info if needed */}
+      {/* <Html position={[0, 0, 0]} as="div" className="label" transform style={{ color: 'white', fontSize: '8px' }}>
+        {id}
+      </Html> */}
     </group>
   )
 } 

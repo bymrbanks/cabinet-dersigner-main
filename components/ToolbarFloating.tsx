@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import InsertCabinetButton from './cabinet/InsertCabinetButton'
 
 interface ToolbarButtonProps {
   icon: React.ReactNode
@@ -40,7 +41,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 }
 
 // Create a tool mode context that can be accessed by other components
-export type ToolMode = 'select' | 'layout' | 'other'
+export type ToolMode = 'select' | 'layout' | 'delete' | 'object-move'
 
 export interface ToolbarState {
   toolMode: ToolMode
@@ -48,11 +49,15 @@ export interface ToolbarState {
   listeners: Array<(mode: ToolMode) => void>
   defaultHeight: number
   setDefaultHeight: (height: number) => void
+  defaultFootprintWidth: number
+  defaultFootprintDepth: number
+  defaultFootprintHeight: number
+  useCabinetTemplate: boolean
 }
 
 // Create a central store for toolbar state
 export let toolbarState: ToolbarState = {
-  toolMode: 'select',
+  toolMode: 'select' as ToolMode,
   setToolMode: (mode: ToolMode) => {
     console.log("Toolbar state: Setting mode to", mode);
     toolbarState.toolMode = mode
@@ -75,7 +80,11 @@ export let toolbarState: ToolbarState = {
   setDefaultHeight: (height: number) => {
     console.log("Setting default height to", height);
     toolbarState.defaultHeight = height;
-  }
+  },
+  defaultFootprintWidth: 24,
+  defaultFootprintDepth: 24,
+  defaultFootprintHeight: 30,
+  useCabinetTemplate: false
 }
 
 // Function to get the current tool mode without using hooks
@@ -83,9 +92,24 @@ export const getCurrentToolMode = (): ToolMode => {
   return toolbarState.toolMode;
 }
 
+// Function to get the default footprint width
+export const getDefaultFootprintWidth = (): number => {
+  return toolbarState.defaultFootprintWidth;
+}
+
+// Function to get the default footprint depth
+export const getDefaultFootprintDepth = (): number => {
+  return toolbarState.defaultFootprintDepth;
+}
+
 // Function to get the default footprint height
 export const getDefaultFootprintHeight = (): number => {
-  return toolbarState.defaultHeight;
+  return toolbarState.defaultFootprintHeight;
+}
+
+// Function to check if we should use the cabinet template
+export const usesCabinetTemplate = (): boolean => {
+  return toolbarState.useCabinetTemplate;
 }
 
 // Function to subscribe to toolbar state changes
@@ -279,6 +303,9 @@ const ToolbarFloating: React.FC = () => {
           }
           tooltip="Components"
         />
+
+        {/* Insert Cabinet button */}
+        <InsertCabinetButton />
       </div>
     </>
   )

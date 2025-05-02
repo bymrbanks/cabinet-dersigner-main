@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Footprint, DragState, ResizeState, FootprintState, FootprintActions, FootprintManagerProps } from './types'
 import FootprintBox from './FootprintBox'
+import { cabinetCarcassTemplate, createCabinetFootprint } from "../cabinet/CabinetTemplate";
+import { usesCabinetTemplate, toolbarState } from "../ToolbarFloating";
 
 // Handler to convert from grid coordinate system (0,0 at corner) to world coordinate system (centered at origin)
 const gridToWorldPosition = (gridPos: [number, number, number], width: number, depth: number): [number, number, number] => {
@@ -33,7 +35,8 @@ export const useFootprintManager = ({
   footprints,
   selectedFootprint,
   onFootprintsChange,
-  onSelectFootprint
+  onSelectFootprint,
+  defaultHeight = 2
 }: FootprintManagerProps): [FootprintState, FootprintActions] => {
   // States for dragging and resizing
   const [dragState, setDragState] = useState<DragState>({
@@ -67,10 +70,13 @@ export const useFootprintManager = ({
   
   // Add a new footprint
   const addFootprint = useCallback((gridPosition: [number, number, number], template?: Partial<Footprint>) => {
+    // If no template provided, use our cabinet carcass template
+    const cabinetTemplate = template || createCabinetFootprint([0, 0, 0], cabinetCarcassTemplate);
+    
     // Round dimensions to integers for better alignment
-    const width = template?.width ? Math.round(template.width) : 2;
-    const depth = template?.depth ? Math.round(template.depth) : 2;
-    const height = template?.height ? Math.round(template.height) : 1;
+    const width = cabinetTemplate.width ? Math.round(cabinetTemplate.width) : 2;
+    const depth = cabinetTemplate.depth ? Math.round(cabinetTemplate.depth) : 2;
+    const height = cabinetTemplate.height ? Math.round(cabinetTemplate.height) : (defaultHeight || 1);
     
     // Ensure Y position is slightly above the floor for visibility
     const newGridPosition: [number, number, number] = [
@@ -91,7 +97,7 @@ export const useFootprintManager = ({
       width: width,
       depth: depth,
       height: height,
-      color: template?.color || "#6495ED",
+      color: cabinetTemplate.color || "#6495ED",
       selected: false
     }
     
@@ -108,7 +114,7 @@ export const useFootprintManager = ({
     onFootprintsChange(updatedFootprints);
     
     return newFootprint.id;
-  }, [footprints, onFootprintsChange]);
+  }, [footprints, onFootprintsChange, defaultHeight, gridToWorldPosition]);
   
   // Delete a footprint
   const deleteFootprint = useCallback((id: string) => {
@@ -569,7 +575,8 @@ export default function FootprintManager({
     footprints,
     selectedFootprint,
     onFootprintsChange,
-    onSelectFootprint
+    onSelectFootprint,
+    defaultHeight
   })
   
   const { footprints: managerFootprints } = state
@@ -588,47 +595,40 @@ export default function FootprintManager({
     console.log("World click position:", e.point)
     
     if (toolMode === 'layout') {
-      // Make sure the footprint will fit in the grid
-      const footprintWidth = 3;
-      const footprintDepth = 3;
-      const footprintHeight = defaultHeight; // Use the prop value
+      // First, check if click is on the floor
+      if (e.object.name !== 'background-plane') {
+        return; // Only allow creating footprints on the floor
+      }
       
-      // Convert world position to grid position (0,0 at corner)
-      const gridClickPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z], footprintWidth, footprintDepth);
-      console.log("Grid click position (0,0 at corner):", gridClickPosition);
-      
-      // Grid unit size (assuming grid units of 1.0)
-      const gridUnit = 1.0;
-      
-      // Round to nearest grid unit to ensure alignment
-      const roundedGridX = Math.round(gridClickPosition[0] / gridUnit) * gridUnit;
-      const roundedGridZ = Math.round(gridClickPosition[2] / gridUnit) * gridUnit;
-      
-      // Constrain position in grid coordinates (0 to 20-width/depth for the far edge)
-      const constrainedGridX = Math.max(0, Math.min(20 - footprintWidth, roundedGridX));
-      const constrainedGridZ = Math.max(0, Math.min(20 - footprintDepth, roundedGridZ));
-      
-      // Create valid grid position
-      const finalGridPosition: [number, number, number] = [
-        constrainedGridX, 
-        0, 
-        constrainedGridZ
+      // Calculate grid-aligned position
+      const gridPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z], 2, 2);
+      const snappedPosition: [number, number, number] = [
+        Math.round(gridPosition[0]),
+        gridPosition[1],
+        Math.round(gridPosition[2])
       ];
       
-      console.log("Creating new footprint at grid position (corner):", finalGridPosition);
+      // Use cabinet template if flag is set
+      if (usesCabinetTemplate()) {
+        console.log("Creating footprint with cabinet template");
+        const cabinetFootprintTemplate = createCabinetFootprint([0, 0, 0], cabinetCarcassTemplate);
+        actions.addFootprint(snappedPosition, cabinetFootprintTemplate);
+        
+        // Reset the flag after creating the footprint
+        toolbarState.useCabinetTemplate = false;
+      } else {
+        // Create default footprint
+        actions.addFootprint(snappedPosition);
+      }
       
-      // Create a new footprint using grid coordinates
-      const newId = actions.addFootprint(finalGridPosition, {
-        width: footprintWidth,
-        depth: footprintDepth,
-        height: footprintHeight,
-        color: "#FF5733"
-      });
+      // Exit layout mode and return to select mode after placing
+      toolbarState.toolMode = 'select';
       
-      console.log("Created new footprint with ID:", newId);
+      // Notify listeners that tool mode has changed back to select
+      const event = new CustomEvent('tool-mode-changed', { detail: { mode: 'select' } });
+      window.dispatchEvent(event);
       
-      // Select it
-      onSelectFootprint(newId);
+      return;
     } else {
       console.log("Not in layout mode, deselecting footprint")
       // In select mode, deselect the current footprint
