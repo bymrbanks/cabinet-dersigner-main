@@ -8,11 +8,12 @@ import FootprintBox from './FootprintBox'
 export const useFootprintManager = ({
   orbitControlsRef,
   toolMode,
-  setCursor
+  setCursor,
+  footprints,
+  selectedFootprint,
+  onFootprintsChange,
+  onSelectFootprint
 }: FootprintManagerProps): [FootprintState, FootprintActions] => {
-  const [footprints, setFootprints] = useState<Footprint[]>([])
-  const [selectedFootprint, setSelectedFootprint] = useState<string | null>(null)
-  
   // States for dragging and resizing
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
@@ -30,19 +31,18 @@ export const useFootprintManager = ({
     currentFootprint: null
   })
   
-  // Find footprint by ID
+  // Use external footprints state now instead of internal state
   const getFootprintById = useCallback((id: string) => {
     return footprints.find(fp => fp.id === id)
   }, [footprints])
 
   // Update a footprint
   const updateFootprint = useCallback((id: string, updates: Partial<Footprint>) => {
-    setFootprints(prevFootprints => 
-      prevFootprints.map(fp => 
-        fp.id === id ? { ...fp, ...updates } : fp
-      )
+    const updatedFootprints = footprints.map(fp => 
+      fp.id === id ? { ...fp, ...updates } : fp
     )
-  }, [])
+    onFootprintsChange(updatedFootprints)
+  }, [footprints, onFootprintsChange])
   
   // Add a new footprint
   const addFootprint = useCallback((position: [number, number, number], template?: Partial<Footprint>) => {
@@ -57,22 +57,29 @@ export const useFootprintManager = ({
     
     console.log("Creating new footprint:", newFootprint)
     
-    setFootprints(prevFootprints => [...prevFootprints, newFootprint])
+    onFootprintsChange([...footprints, newFootprint])
     return newFootprint.id
-  }, [])
+  }, [footprints, onFootprintsChange])
   
   // Delete a footprint
   const deleteFootprint = useCallback((id: string) => {
-    setFootprints(current => current.filter(fp => fp.id !== id))
+    const updatedFootprints = footprints.filter(fp => fp.id !== id)
+    onFootprintsChange(updatedFootprints)
     if (selectedFootprint === id) {
-      setSelectedFootprint(null)
+      onSelectFootprint(null)
     }
-  }, [selectedFootprint])
+  }, [footprints, selectedFootprint, onFootprintsChange, onSelectFootprint])
   
   // Select a footprint
   const selectFootprint = useCallback((id: string | null) => {
-    setSelectedFootprint(id)
-  }, [])
+    onSelectFootprint(id)
+    // Update the selected state of footprints
+    const updatedFootprints = footprints.map(fp => ({
+      ...fp,
+      selected: fp.id === id
+    }))
+    onFootprintsChange(updatedFootprints)
+  }, [footprints, onFootprintsChange, onSelectFootprint])
   
   // Start dragging a footprint
   const startDrag = useCallback((e: any, id: string, isDuplicate: boolean = false) => {
@@ -466,15 +473,23 @@ export const useFootprintManager = ({
 export default function FootprintManager({
   orbitControlsRef,
   toolMode,
-  setCursor
+  setCursor,
+  footprints,
+  selectedFootprint,
+  onFootprintsChange,
+  onSelectFootprint
 }: FootprintManagerProps) {
   const [state, actions] = useFootprintManager({
     orbitControlsRef,
     toolMode,
-    setCursor
+    setCursor,
+    footprints,
+    selectedFootprint,
+    onFootprintsChange,
+    onSelectFootprint
   })
   
-  const { footprints, selectedFootprint } = state
+  const { footprints: managerFootprints } = state
   
   // Handle background plane click
   const handlePlaneClick = (e: any) => {
@@ -515,7 +530,7 @@ export default function FootprintManager({
       </mesh>
       
       {/* Render all footprints */}
-      {footprints.map(footprint => (
+      {managerFootprints.map(footprint => (
         <FootprintBox
           key={footprint.id}
           footprint={footprint}

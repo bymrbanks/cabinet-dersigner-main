@@ -47,4 +47,8 @@ export type FootprintManagerProps = {
   orbitControlsRef: MutableRefObject<any>;
   toolMode: string;
   setCursor: (cursor: string) => void;
+  footprints: Footprint[];
+  selectedFootprint: string | null;
+  onFootprintsChange: (footprints: Footprint[]) => void;
+  onSelectFootprint: (id: string | null) => void;
 } 
