@@ -38,6 +38,7 @@ export default function CabinetOutliner() {
 
   // Function to get the part type from an ID
   const getPartType = (id: string): string => {
+    if (!id) return "Unknown";
     if (id.includes("drawer")) return "Drawer"
     if (id.includes("door")) return "Door"
     if (id.includes("shelf")) return "Shelf"
@@ -47,6 +48,8 @@ export default function CabinetOutliner() {
 
   // Function to get a human-readable name from an ID
   const getPartName = (id: string): string => {
+    if (!id) return "Unknown";
+    
     const parts = id.split("-")
     
     // Extract cabinet number (use the UUID's first few characters)
@@ -80,7 +83,15 @@ export default function CabinetOutliner() {
 
   // Generate hierarchical structure for the outliner
   const generateOutlinerData = () => {
-    return (cabinets || []).map(cabinet => {
+    if (!cabinets || !Array.isArray(cabinets)) {
+      return []
+    }
+    
+    return cabinets.map(cabinet => {
+      if (!cabinet || !cabinet.id) {
+        return null;
+      }
+      
       const cabinetItem = {
         id: cabinet.id,
         name: getPartName(cabinet.id),
@@ -91,46 +102,56 @@ export default function CabinetOutliner() {
       }
       
       // Add compartments
-      (cabinet.compartments || []).forEach((compartment, compartmentIndex) => {
-        const compartmentId = `${cabinet.id}-compartment-${compartmentIndex}`
-        const compartmentItem = {
-          id: compartmentId,
-          name: `Compartment ${compartmentIndex + 1}`,
-          type: "Compartment",
-          isSelected: selectedPart === compartmentId,
-          children: [] as OutlinerItemType[]
-        }
-        
-        // Add sections (doors, drawers)
-        (compartment.sections || []).forEach((section, sectionIndex) => {
-          const sectionId = `${cabinet.id}-compartment-${compartmentIndex}-${section.type}-${sectionIndex}`
-          const sectionItem = {
-            id: sectionId,
-            name: `${section.type === "door" ? "Door" : "Drawer"} ${sectionIndex + 1}`,
-            type: section.type === "door" ? "Door" : "Drawer",
-            isSelected: selectedPart === sectionId,
-            isOpen: isPartOpen(sectionId)
+      if (cabinet.compartments && Array.isArray(cabinet.compartments)) {
+        cabinet.compartments.forEach((compartment, compartmentIndex) => {
+          if (!compartment) return;
+          
+          const compartmentId = `${cabinet.id}-compartment-${compartmentIndex}`
+          const compartmentItem = {
+            id: compartmentId,
+            name: `Compartment ${compartmentIndex + 1}`,
+            type: "Compartment",
+            isSelected: selectedPart === compartmentId,
+            children: [] as OutlinerItemType[]
           }
-          compartmentItem.children.push(sectionItem)
-        })
-        
-        // Add shelves
-        (compartment.shelves || []).forEach((shelf, shelfIndex) => {
-          const shelfId = `${cabinet.id}-compartment-${compartmentIndex}-shelf-${shelfIndex}`
-          const shelfItem = {
-            id: shelfId,
-            name: `Shelf ${shelfIndex + 1}`,
-            type: "Shelf",
-            isSelected: selectedPart === shelfId
+          
+          // Add sections (doors, drawers)
+          if (compartment.sections && Array.isArray(compartment.sections)) {
+            compartment.sections.forEach((section, sectionIndex) => {
+              if (!section || !section.type) return;
+              
+              const sectionId = `${cabinet.id}-compartment-${compartmentIndex}-${section.type}-${sectionIndex}`
+              const sectionItem = {
+                id: sectionId,
+                name: `${section.type === "door" ? "Door" : "Drawer"} ${sectionIndex + 1}`,
+                type: section.type === "door" ? "Door" : "Drawer",
+                isSelected: selectedPart === sectionId,
+                isOpen: isPartOpen(sectionId)
+              }
+              compartmentItem.children.push(sectionItem)
+            });
           }
-          compartmentItem.children.push(shelfItem)
-        })
-        
-        cabinetItem.children.push(compartmentItem)
-      })
+          
+          // Add shelves
+          if (compartment.shelves && Array.isArray(compartment.shelves)) {
+            compartment.shelves.forEach((shelf, shelfIndex) => {
+              const shelfId = `${cabinet.id}-compartment-${compartmentIndex}-shelf-${shelfIndex}`
+              const shelfItem = {
+                id: shelfId,
+                name: `Shelf ${shelfIndex + 1}`,
+                type: "Shelf",
+                isSelected: selectedPart === shelfId
+              }
+              compartmentItem.children.push(shelfItem)
+            });
+          }
+          
+          cabinetItem.children.push(compartmentItem)
+        });
+      }
       
       return cabinetItem
-    })
+    }).filter(Boolean) as OutlinerItemType[];
   }
 
   const outlineData = generateOutlinerData()
@@ -157,18 +178,22 @@ export default function CabinetOutliner() {
           <h3 className="font-medium py-2 px-1 text-sm">Cabinet Outliner</h3>
           
           <div className="mt-2">
-            {outlineData.map((cabinet) => (
-              <OutlinerItem
-                key={cabinet.id}
-                item={cabinet}
-                onSelect={(id) => {
-                  setSelectedPart(id)
-                  const cabinetId = id.split("-")[0] + "-" + id.split("-")[1]
-                  setActiveCabinet(cabinetId)
-                }}
-                onToggle={(id) => toggleOpenState(id)}
-              />
-            ))}
+            {outlineData && outlineData.length > 0 ? (
+              outlineData.map((cabinet) => (
+                <OutlinerItem
+                  key={cabinet.id}
+                  item={cabinet}
+                  onSelect={(id) => {
+                    setSelectedPart(id)
+                    const cabinetId = id.split("-")[0] + "-" + id.split("-")[1]
+                    setActiveCabinet(cabinetId)
+                  }}
+                  onToggle={(id) => toggleOpenState(id)}
+                />
+              ))
+            ) : (
+              <div className="text-xs text-gray-500 p-2">No cabinets found</div>
+            )}
           </div>
         </div>
       )}
@@ -179,7 +204,7 @@ export default function CabinetOutliner() {
 // Recursive component for outliner items
 function OutlinerItem({ item, onSelect, onToggle, depth = 0 }: OutlinerItemProps) {
   const [isExpanded, setIsExpanded] = useState(true)
-  const hasChildren = item.children && item.children.length > 0
+  const hasChildren = item.children && Array.isArray(item.children) && item.children.length > 0
   
   return (
     <div className="select-none">
@@ -226,7 +251,7 @@ function OutlinerItem({ item, onSelect, onToggle, depth = 0 }: OutlinerItemProps
       {/* Render children if expanded */}
       {hasChildren && isExpanded && (
         <div>
-          {(item.children || []).map((child) => (
+          {item.children!.map((child) => (
             <OutlinerItem
               key={child.id}
               item={child}
