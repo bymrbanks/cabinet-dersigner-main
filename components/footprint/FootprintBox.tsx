@@ -6,7 +6,7 @@ import { useThree } from '@react-three/fiber'
 import { Footprint, ResizeState } from './types'
 
 // Define the edge types for single-direction resizing
-type Edge = 'top' | 'bottom' | 'left' | 'right' | null;
+type Edge = 'top' | 'bottom' | 'left' | 'right' | 'height' | null;
 
 interface FootprintBoxProps {
   footprint: Footprint
@@ -29,7 +29,7 @@ export default function FootprintBox({
   toolMode,
   setCursor
 }: FootprintBoxProps) {
-  const { id, position, width, depth, color = "#6495ED", visible } = footprint
+  const { id, position, width, depth, height = 1, color = "#6495ED", visible } = footprint
   const boxColor = color
   const borderColor = isSelected ? "#FF4500" : "#4682B4"
   const opacity = isSelected ? 0.8 : 0.6 // Increased opacity for better visibility
@@ -41,8 +41,8 @@ export default function FootprintBox({
   
   // Log rendering of footprint for debugging
   useEffect(() => {
-    console.log(`Rendering footprint ${id} at`, position, `width: ${width}, depth: ${depth}`);
-  }, [id, position, width, depth]);
+    console.log(`Rendering footprint ${id} at`, position, `width: ${width}, depth: ${depth}, height: ${height}`);
+  }, [id, position, width, depth, height]);
   
   // Track which edge is being hovered
   const [hoveredEdge, setHoveredEdge] = useState<Edge>(null)
@@ -81,9 +81,15 @@ export default function FootprintBox({
     const distToBottom = Math.abs(localPoint.z - depth/2)
     const distToLeft = Math.abs(localPoint.x - (-width/2))
     const distToRight = Math.abs(localPoint.x - width/2)
+    // Check if we're near the top of the box for height adjustment
+    const distToHeight = Math.abs(localPoint.y - height/2)
     
     // Find the closest edge - prioritize in this order
-    if (distToTop < threshold && distToTop <= distToBottom && distToTop <= distToLeft && distToTop <= distToRight) {
+    if (distToHeight < threshold && distToHeight <= distToTop && distToHeight <= distToBottom && 
+        distToHeight <= distToLeft && distToHeight <= distToRight) {
+      setHoveredEdge('height')
+      setCursor("ns-resize")
+    } else if (distToTop < threshold && distToTop <= distToBottom && distToTop <= distToLeft && distToTop <= distToRight) {
       setHoveredEdge('top')
       setCursor("ns-resize")
     } else if (distToBottom < threshold && distToBottom <= distToTop && distToBottom <= distToLeft && distToBottom <= distToRight) {
@@ -99,7 +105,7 @@ export default function FootprintBox({
       setHoveredEdge(null)
       setCursor("grab")
     }
-  }, [isSelected, toolMode, setCursor, width, depth, position])
+  }, [isSelected, toolMode, setCursor, width, depth, height, position])
   
   // Handle pointer down to start resize or drag
   const handlePointerDown = useCallback((e: any) => {
@@ -123,6 +129,9 @@ export default function FootprintBox({
           break;
         case 'left':
           corner = 'bottomRight'; // Using bottomRight for left edge
+          break;
+        case 'height':
+          corner = 'top'; // Using top for height adjustment
           break;
         default:
           return;
@@ -188,9 +197,19 @@ export default function FootprintBox({
             opacity={hoveredEdge === 'right' ? 0.8 : 0.5} 
           />
         </mesh>
+        
+        {/* Height handle */}
+        <mesh position={[0, height/2, 0]}>
+          <planeGeometry args={[width, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'height' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'height' ? 0.8 : 0.5} 
+          />
+        </mesh>
       </>
     )
-  }, [isSelected, width, depth, hoveredEdge])
+  }, [isSelected, width, depth, height, hoveredEdge])
   
   return (
     <group 
@@ -209,14 +228,14 @@ export default function FootprintBox({
       }}
     >
       {/* Main box */}
-      <mesh position={[0, 0.05, 0]}>
-        <boxGeometry args={[width, 0.1, depth]} />
+      <mesh position={[0, height/2 - 0.05, 0]}>
+        <boxGeometry args={[width, height, depth]} />
         <meshStandardMaterial color={boxColor} transparent opacity={opacity} />
       </mesh>
 
       {/* Border */}
-      <lineSegments position={[0, 0.11, 0]}>
-        <edgesGeometry args={[new THREE.BoxGeometry(width, 0.1, depth)]} />
+      <lineSegments position={[0, height/2 - 0.05, 0]}>
+        <edgesGeometry args={[new THREE.BoxGeometry(width, height, depth)]} />
         <lineBasicMaterial color={borderColor} linewidth={3} />
       </lineSegments>
 

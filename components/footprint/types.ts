@@ -6,6 +6,7 @@ export interface Footprint {
   gridPosition?: [number, number, number]  // Grid position (where 0,0 is the edge)
   width: number
   depth: number
+  height: number  // Height of the footprint
   color?: string
   selected?: boolean
   visible?: boolean  // Whether the footprint is visible
@@ -20,9 +21,9 @@ export type DragState = {
 
 export type ResizeState = {
   isResizing: boolean;
-  corner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | null;
+  corner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "top" | null;
   startPosition: [number, number, number] | null;
-  startDimensions: { width: number; depth: number } | null;
+  startDimensions: { width: number; depth: number; height: number } | null;
   startBoxPosition: [number, number, number] | null;
   currentFootprint: string | null;
 }

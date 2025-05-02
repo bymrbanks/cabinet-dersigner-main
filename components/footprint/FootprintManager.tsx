@@ -70,6 +70,7 @@ export const useFootprintManager = ({
     // Round dimensions to integers for better alignment
     const width = template?.width ? Math.round(template.width) : 2;
     const depth = template?.depth ? Math.round(template.depth) : 2;
+    const height = template?.height ? Math.round(template.height) : 1;
     
     // Ensure Y position is slightly above the floor for visibility
     const newGridPosition: [number, number, number] = [
@@ -89,6 +90,7 @@ export const useFootprintManager = ({
       gridPosition: newGridPosition, // Store original grid position for UI
       width: width,
       depth: depth,
+      height: height,
       color: template?.color || "#6495ED",
       selected: false
     }
@@ -211,13 +213,14 @@ export const useFootprintManager = ({
       startPosition: [e.point.x, e.point.y, e.point.z],
       startDimensions: { 
         width: footprint.width, 
-        depth: footprint.depth 
+        depth: footprint.depth,
+        height: footprint.height || 1
       },
       startBoxPosition: [...footprint.position] as [number, number, number],
       currentFootprint: id
     })
     
-    setCursor(corner === 'topLeft' || corner === 'bottomRight' ? "nwse-resize" : "nesw-resize")
+    setCursor(corner === 'top' ? "ns-resize" : corner === 'topLeft' || corner === 'bottomRight' ? "nwse-resize" : "nesw-resize")
     
     // Disable orbit controls during resize
     if (orbitControlsRef.current) {
@@ -300,10 +303,12 @@ export const useFootprintManager = ({
       // Calculate the delta from the start position
       const deltaX = e.point.x - resizeState.startPosition[0]
       const deltaZ = e.point.z - resizeState.startPosition[2]
+      const deltaY = e.point.y - resizeState.startPosition[1]
       
       // Initial values
       let newWidth = resizeState.startDimensions.width
       let newDepth = resizeState.startDimensions.depth
+      let newHeight = resizeState.startDimensions.height
       let newPosition = [...resizeState.startBoxPosition] as [number, number, number]
       
       // Grid constraints - grid is centered at origin, -10 to 10 in both x and z
@@ -313,6 +318,16 @@ export const useFootprintManager = ({
       // Single directional resizing based on the corner
       // We're using the corner field for edge compatibility
       switch(resizeState.corner) {
+        case 'top': // Height resize
+          // Only change height, not width or depth
+          newHeight = Math.max(minSize, resizeState.startDimensions.height + deltaY * 2)
+          
+          // Make sure height is positive but don't constrain to grid
+          newHeight = Math.max(minSize, newHeight)
+          
+          // Don't update position for height changes
+          break
+          
         case 'topLeft': // Top edge resize
           // Only change depth, not width
           newDepth = Math.max(minSize, resizeState.startDimensions.depth - deltaZ * 2)
@@ -386,12 +401,13 @@ export const useFootprintManager = ({
           break
       }
       
-      console.log("New dimensions:", { width: newWidth, depth: newDepth, position: newPosition })
+      console.log("New dimensions:", { width: newWidth, depth: newDepth, height: newHeight, position: newPosition })
       
       // Update the footprint
       updateFootprint(resizeState.currentFootprint, {
         width: newWidth,
         depth: newDepth,
+        height: newHeight,
         position: newPosition
       })
     }
@@ -570,6 +586,7 @@ export default function FootprintManager({
       // Make sure the footprint will fit in the grid
       const footprintWidth = 3;
       const footprintDepth = 3;
+      const footprintHeight = 2; // Default height for new footprints
       
       // Convert world position to grid position (0,0 at corner)
       const gridClickPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z], footprintWidth, footprintDepth);
@@ -599,6 +616,7 @@ export default function FootprintManager({
       const newId = actions.addFootprint(finalGridPosition, {
         width: footprintWidth,
         depth: footprintDepth,
+        height: footprintHeight,
         color: "#FF5733"
       });
       
