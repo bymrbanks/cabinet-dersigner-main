@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Download, Camera, Undo, Redo, Ruler, GridIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useCabinetStore } from "@/store/cabinet-store"
+import ToolbarFloating from "./ToolbarFloating"
 
 function Scene() {
   const { toast } = useToast()
@@ -261,6 +262,9 @@ export default function CabinetDesigner() {
           </div>
         </div>
       )}
+
+      {/* Floating toolbar */}
+      <ToolbarFloating />
 
       <Canvas shadows camera={{ position: [5, 5, 5], fov: 45 }}>
         <Suspense fallback={null}>
