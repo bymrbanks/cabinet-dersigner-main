@@ -8,7 +8,7 @@ import DimensionLines from "./dimension-lines"
 import SelectionIndicator from "./selection-indicator"
 import DirectManipulationControls from "./direct-manipulation-controls"
 import VisualGuides from "./visual-guides"
-import type { Group } from "three"
+import { Group } from "three"
 
 interface CabinetProps {
   id: string
@@ -94,7 +94,7 @@ export default function Cabinet({
   const displayDepth = Math.round(depth)
 
   return (
-    <group
+    <Group
       ref={cabinetRef}
       onClick={(e) => {
         e.stopPropagation()
@@ -142,6 +142,6 @@ export default function Cabinet({
 
       {/* Visual guides */}
       <VisualGuides objectId={id} />
-    </group>
+    </Group>
   )
 }

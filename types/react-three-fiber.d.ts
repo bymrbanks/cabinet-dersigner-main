@@ -7,69 +7,29 @@ declare global {
   namespace JSX {
     interface IntrinsicElements {
       // Basic Three.js elements
-      mesh: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        [key: string]: any;
-        position?: [number, number, number];
-        rotation?: [number, number, number];
-        onClick?: (event: any) => void;
-        onPointerDown?: (event: any) => void;
-        onPointerUp?: (event: any) => void;
-        onPointerMove?: (event: any) => void;
-        onDoubleClick?: (event: any) => void;
-      };
-      lineSegments: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        [key: string]: any;
-        position?: [number, number, number];
-      };
-      group: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        [key: string]: any;
-        position?: [number, number, number];
-        onClick?: (event: any) => void;
-        onDoubleClick?: (event: any) => void;
-      };
+      mesh: any;
+      group: any;
+      lineSegments: any;
       
       // Geometries
-      boxGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { args?: any[] };
-      planeGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { args?: any[] };
-      sphereGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { args?: any[] };
-      edgesGeometry: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { args?: any[] };
+      boxGeometry: any;
+      planeGeometry: any;
+      sphereGeometry: any;
+      edgesGeometry: any;
       
       // Materials
-      meshStandardMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        color?: string; 
-        transparent?: boolean; 
-        opacity?: number;
-        wireframe?: boolean;
-      };
-      meshBasicMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        color?: string; 
-        transparent?: boolean; 
-        opacity?: number;
-        wireframe?: boolean;
-      };
-      shadowMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        transparent?: boolean; 
-        opacity?: number;
-      };
-      lineBasicMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        color?: string; 
-        linewidth?: number;
-      };
+      meshStandardMaterial: any;
+      meshBasicMaterial: any;
+      shadowMaterial: any;
+      lineBasicMaterial: any;
       
       // Lights
-      ambientLight: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { intensity?: number };
-      directionalLight: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        position?: [number, number, number];
-        intensity?: number;
-        castShadow?: boolean;
-      };
+      ambientLight: any;
+      directionalLight: any;
       
       // Other
-      color: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { 
-        attach?: string;
-        args?: [string];
-      };
-      primitive: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> & { object?: any };
+      color: any;
+      primitive: any;
     }
   }
 }
@@ -104,6 +64,19 @@ declare namespace THREE {
     point: Vector3;
     object: Object3D;
   }
+}
+
+declare module 'three' {
+  export const BoxGeometry: any;
+  export const Group: any;
+}
+
+declare module '@react-three/fiber' {
+  export const useThree: () => {
+    camera: any;
+    gl: any;
+    scene: any;
+  };
 }
 
 // Need to export something to be a valid module

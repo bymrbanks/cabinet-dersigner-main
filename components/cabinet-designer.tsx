@@ -1,6 +1,6 @@
 "use client"
 
-import { Canvas, useThree } from "@react-three/fiber"
+import { Canvas } from "@react-three/fiber"
 import { OrbitControls, Environment } from "@react-three/drei"
 import { Suspense, useEffect, useRef, useState, useCallback } from "react"
 import Grid from "./grids/grid"
@@ -9,25 +9,15 @@ import BackWallGrid from "./grids/back-wall-grid"
 import { toolbarState, ToolMode } from "./ToolbarFloating"
 import ToolbarFloating, { useToolbarState } from "./ToolbarFloating"
 import { useBlankStore } from "@/store/blank-store"
-import * as THREE from "three"
-
-// Define the Footprint type directly here
-interface Footprint {
-  id: string
-  position: [number, number, number]
-  width: number
-  depth: number
-  color?: string
-  selected?: boolean
-}
+import { useThree } from "@react-three/fiber"
+import FootprintManager from "./footprint/FootprintManager"
 
 function Scene() {
   const orbitControlsRef = useRef<any>(null)
-  const { gl, scene, camera } = useThree()
+  const { camera, gl } = useThree()
   
-  const [footprints, setFootprints] = useState<Footprint[]>([])
-  const [selectedFootprint, setSelectedFootprint] = useState<string | null>(null)
   const [toolMode, setToolMode] = useState<ToolMode>('select')
+  const [cursor, setCursor] = useState<string>("auto")
   
   const { setSelectedPart } = useBlankStore()
   
@@ -40,19 +30,28 @@ function Scene() {
     if (orbitControlsRef.current) {
       if (mode === 'layout') {
         orbitControlsRef.current.enabled = false
+        setCursor("crosshair")
         console.log("Orbit controls disabled for layout mode")
       } else {
         orbitControlsRef.current.enabled = true
+        setCursor("auto")
         console.log("Orbit controls enabled")
       }
     }
-    
-    // Deselect any selected footprint when changing modes
-    setSelectedFootprint(null)
   }, [])
   
   // Subscribe to toolbar state changes
   useToolbarState(handleToolModeChange)
+  
+  // Apply cursor style to the canvas
+  useEffect(() => {
+    const canvas = gl.domElement
+    canvas.style.cursor = cursor
+    
+    return () => {
+      canvas.style.cursor = 'auto'
+    }
+  }, [cursor, gl])
   
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -60,12 +59,6 @@ function Scene() {
       if (e.key === 'Escape' && toolMode === 'layout') {
         // Exit layout mode when Escape is pressed
         handleToolModeChange('select')
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        // Delete selected footprint
-        if (selectedFootprint) {
-          setFootprints(current => current.filter(fp => fp.id !== selectedFootprint))
-          setSelectedFootprint(null)
-        }
       }
     }
     
@@ -73,112 +66,7 @@ function Scene() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [toolMode, handleToolModeChange, selectedFootprint])
-
-  // Handle background plane click
-  const handlePlaneClick = (e: any) => {
-    e.stopPropagation() // Stop event propagation
-    
-    console.log("Background plane clicked in mode:", toolMode)
-    console.log("Click point:", e.point)
-    
-    if (toolMode === 'layout') {
-      // Add a new box at the click position
-      const newFootprint: Footprint = {
-        id: `footprint-${Date.now()}`,
-        position: [e.point.x, 0.01, e.point.z],
-        width: 2,
-        depth: 2,
-        color: "#6495ED",
-        selected: false
-      }
-      
-      console.log("Creating new footprint:", newFootprint)
-      
-      setFootprints(prevFootprints => [...prevFootprints, newFootprint])
-      setSelectedFootprint(newFootprint.id)
-    } else {
-      // In select mode, deselect the current footprint
-      setSelectedFootprint(null)
-    }
-  }
-  
-  // Handle footprint box click
-  const handleBoxClick = (e: any, id: string) => {
-    e.stopPropagation() // Stop event from reaching the background plane
-    console.log("Box clicked:", id)
-    setSelectedFootprint(id)
-  }
-  
-  // Handle footprint double click (delete)
-  const handleBoxDoubleClick = (e: any, id: string) => {
-    e.stopPropagation()
-    console.log("Box double-clicked (deleting):", id)
-    setFootprints(footprints => footprints.filter(fp => fp.id !== id))
-    setSelectedFootprint(null)
-  }
-  
-  // Render a footprint box
-  const renderFootprintBox = (footprint: Footprint) => {
-    const { id, position, width, depth, color = "#6495ED" } = footprint
-    const isSelected = selectedFootprint === id
-    const boxColor = color
-    const borderColor = isSelected ? "#FF4500" : "#4682B4"
-    const opacity = isSelected ? 0.6 : 0.4
-    const handleSize = 0.3
-    
-    console.log("Rendering footprint:", id, "selected:", isSelected)
-    
-    return (
-      <group 
-        key={id} 
-        position={position} 
-        onClick={(e) => handleBoxClick(e, id)}
-        onDoubleClick={(e) => handleBoxDoubleClick(e, id)}
-      >
-        {/* Main box */}
-        <mesh position={[0, 0.02, 0]}>
-          <boxGeometry args={[width, 0.02, depth]} />
-          <meshStandardMaterial color={boxColor} transparent opacity={opacity} />
-        </mesh>
-
-        {/* Border */}
-        <lineSegments position={[0, 0.025, 0]}>
-          <edgesGeometry args={[new THREE.BoxGeometry(width, 0.02, depth)]} />
-          <lineBasicMaterial color={borderColor} linewidth={2} />
-        </lineSegments>
-
-        {/* Resize handles - only show when selected */}
-        {isSelected && (
-          <>
-            {/* Top-left handle */}
-            <mesh position={[-width/2, 0.05, -depth/2]}>
-              <boxGeometry args={[handleSize, handleSize, handleSize]} />
-              <meshStandardMaterial color="#FF0000" />
-            </mesh>
-
-            {/* Top-right handle */}
-            <mesh position={[width/2, 0.05, -depth/2]}>
-              <boxGeometry args={[handleSize, handleSize, handleSize]} />
-              <meshStandardMaterial color="#FF0000" />
-            </mesh>
-
-            {/* Bottom-left handle */}
-            <mesh position={[-width/2, 0.05, depth/2]}>
-              <boxGeometry args={[handleSize, handleSize, handleSize]} />
-              <meshStandardMaterial color="#FF0000" />
-            </mesh>
-
-            {/* Bottom-right handle */}
-            <mesh position={[width/2, 0.05, depth/2]}>
-              <boxGeometry args={[handleSize, handleSize, handleSize]} />
-              <meshStandardMaterial color="#FF0000" />
-            </mesh>
-          </>
-        )}
-      </group>
-    )
-  }
+  }, [toolMode, handleToolModeChange])
 
   return (
     <>
@@ -198,20 +86,12 @@ function Scene() {
       <SideWallGrid />
       <BackWallGrid />
 
-      {/* Background plane for mouse interaction */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.01, 0]}
-        receiveShadow
-        name="background-plane"
-        onClick={handlePlaneClick}
-      >
-        <planeGeometry args={[100, 100]} />
-        <shadowMaterial transparent opacity={0.2} />
-      </mesh>
-      
-      {/* Render all footprints */}
-      {footprints.map(footprint => renderFootprintBox(footprint))}
+      {/* Footprint Manager */}
+      <FootprintManager 
+        orbitControlsRef={orbitControlsRef}
+        toolMode={toolMode}
+        setCursor={setCursor}
+      />
 
       <OrbitControls
         ref={orbitControlsRef}
