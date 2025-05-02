@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useThree } from "@react-three/fiber"
 import FootprintBox, { FootprintBoxProps } from "./FootprintBox"
 
@@ -15,12 +15,14 @@ export interface Footprint {
 
 interface FootprintManagerProps {
   onFootprintsChange?: (footprints: Footprint[]) => void
+  backgroundPlane?: THREE.Mesh | null
 }
 
-export default function FootprintManager({ onFootprintsChange }: FootprintManagerProps) {
+export default function FootprintManager({ onFootprintsChange, backgroundPlane }: FootprintManagerProps) {
   const [footprints, setFootprints] = useState<Footprint[]>([])
   const [selectedFootprint, setSelectedFootprint] = useState<string | null>(null)
   const { scene } = useThree()
+  const isSetupRef = useRef(false)
 
   // When footprints change, notify parent
   useEffect(() => {
@@ -31,11 +33,12 @@ export default function FootprintManager({ onFootprintsChange }: FootprintManage
 
   // Handle background click to add new footprint or deselect
   const handleBackgroundClick = (event: any) => {
-    // Only respond to click on the background plane
-    if (event.object.name !== "background-plane") return
+    console.log("Background click detected", event);
     
     // Add a new footprint at the click position
-    const point = event.point
+    const point = event.point;
+    console.log("Adding footprint at position:", point);
+    
     const newFootprint: Footprint = {
       id: `footprint-${Date.now()}`,
       position: [point.x, 0.01, point.z],
@@ -45,7 +48,10 @@ export default function FootprintManager({ onFootprintsChange }: FootprintManage
       type: "cabinet"
     }
     
-    setFootprints([...footprints, newFootprint])
+    setFootprints(prevFootprints => {
+      console.log("Updating footprints array, current count:", prevFootprints.length);
+      return [...prevFootprints, newFootprint];
+    });
     setSelectedFootprint(newFootprint.id)
   }
 
@@ -78,16 +84,41 @@ export default function FootprintManager({ onFootprintsChange }: FootprintManage
     setSelectedFootprint(id)
   }
 
-  // Add event listener to background plane
+  // Use the provided backgroundPlane ref if available, otherwise find it in the scene
   useEffect(() => {
-    const backgroundPlane = scene.getObjectByName("background-plane")
-    if (backgroundPlane) {
-      backgroundPlane.addEventListener("click", handleBackgroundClick)
+    if (isSetupRef.current) return; // Only set up once
+    
+    console.log("Setting up background plane click handler");
+    
+    // Determine which background plane to use
+    const plane = backgroundPlane || scene.getObjectByName("background-plane") as THREE.Mesh | undefined;
+    console.log("Background plane found:", plane);
+    
+    if (plane) {
+      // Direct event handler
+      const directClickHandler = (event: any) => {
+        console.log("Direct click handler called");
+        handleBackgroundClick(event);
+      };
+      
+      // First, remove any existing event listener to prevent duplicates
+      plane.removeEventListener("click", directClickHandler);
+      
+      // Add the event listener
+      plane.addEventListener("click", directClickHandler);
+      console.log("Click handler attached to background plane");
+      
+      // Set flag to prevent multiple setups
+      isSetupRef.current = true;
+      
       return () => {
-        backgroundPlane.removeEventListener("click", handleBackgroundClick)
+        console.log("Removing click handler from background plane");
+        plane.removeEventListener("click", directClickHandler);
       }
+    } else {
+      console.warn("Background plane not found!");
     }
-  }, [scene, footprints])
+  }, [scene, backgroundPlane]);
 
   return (
     <>

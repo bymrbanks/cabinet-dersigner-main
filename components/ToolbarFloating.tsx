@@ -43,6 +43,7 @@ export type ToolMode = 'select' | 'layout' | 'other'
 export interface ToolbarState {
   toolMode: ToolMode
   setToolMode: (mode: ToolMode) => void
+  listeners: Array<(mode: ToolMode) => void>
 }
 
 // Create a central store for toolbar state
@@ -54,7 +55,7 @@ let toolbarState: ToolbarState = {
       toolbarState.listeners.forEach(listener => listener(mode))
     }
   },
-  listeners: [] as ((mode: ToolMode) => void)[]
+  listeners: [] as Array<(mode: ToolMode) => void>
 }
 
 // Function to subscribe to toolbar state changes
@@ -76,6 +77,7 @@ const ToolbarFloating: React.FC = () => {
   const [activeToolMode, setActiveToolMode] = useState<ToolMode>('select')
   
   const handleToolModeChange = (mode: ToolMode) => {
+    console.log("Toolbar: Setting tool mode to", mode);
     setActiveToolMode(mode)
     toolbarState.setToolMode(mode)
   }

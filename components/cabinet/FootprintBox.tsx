@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import * as THREE from "three"
 
 const HANDLE_SIZE = 0.3
@@ -32,8 +32,14 @@ export default function FootprintBox({
   const borderColor = selected ? "#FF4500" : "#4682B4"
   const opacity = selected ? 0.6 : 0.4
 
+  // Log when the component renders
+  useEffect(() => {
+    console.log(`FootprintBox ${id} rendered at position:`, position);
+  }, [id, position]);
+
   // Handle dragging for resize and movement
   const handlePointerDown = (e: THREE.Event, handle: string) => {
+    console.log(`Pointer down on ${id}, handle: ${handle}`);
     e.stopPropagation()
     
     // Select this box when clicked
@@ -45,12 +51,16 @@ export default function FootprintBox({
   }
 
   const handlePointerUp = () => {
+    console.log(`Pointer up on ${id}`);
     setDragging(null)
   }
 
   const handlePointerMove = (e: THREE.Event) => {
     if (!dragging) return
 
+    // Only stop propagation if we're actually dragging
+    e.stopPropagation();
+    
     const delta = e.delta as THREE.Vector3
     
     // Calculate new position and dimensions
@@ -91,10 +101,12 @@ export default function FootprintBox({
       }
     }
 
+    console.log(`Updating ${id} with new position:`, newPos, `and dimensions:`, newWidth, newDepth);
     onUpdate(id, newPos, newWidth, newDepth)
   }
 
   const handleDoubleClick = (e: THREE.Event) => {
+    console.log(`Double click on ${id}`);
     e.stopPropagation()
     if (onDelete) onDelete(id)
   }

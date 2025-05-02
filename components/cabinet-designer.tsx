@@ -12,20 +12,24 @@ import ToolbarFloating, { useToolbarState, ToolMode } from "./ToolbarFloating"
 
 function Scene() {
   const orbitControlsRef = useRef<any>(null)
+  const backgroundPlaneRef = useRef<THREE.Mesh>(null)
   const { setSelectedPart } = useBlankStore()
   const [footprints, setFootprints] = useState<Footprint[]>([])
   const [toolMode, setToolMode] = useState<ToolMode>('select')
   
   // Handle toolbar mode changes
   const handleToolModeChange = useCallback((mode: ToolMode) => {
+    console.log("Tool mode changed to:", mode);
     setToolMode(mode)
     
     // When switching to layout mode, disable orbit controls
     if (orbitControlsRef.current) {
       if (mode === 'layout') {
         orbitControlsRef.current.enabled = false;
+        console.log("Orbit controls disabled for layout mode");
       } else {
         orbitControlsRef.current.enabled = true;
+        console.log("Orbit controls enabled");
       }
     }
   }, []);
@@ -48,10 +52,18 @@ function Scene() {
     };
   }, [toolMode, handleToolModeChange]);
 
-  // Handle background click
+  // Handle background click when in selection mode
   const handleBackgroundClick = (e: any) => {
+    // Log all click events in dev mode
+    console.log("Background click event in selection mode:", e);
+    
     // Only handle direct background clicks
-    if (e.object.name !== "background-plane") return
+    if (e.object.name !== "background-plane") {
+      console.log("Click not on background plane");
+      return;
+    }
+    
+    console.log("Valid background plane click in selection mode");
 
     // Deselect current selection
     setSelectedPart(null)
@@ -59,6 +71,7 @@ function Scene() {
 
   // Handle footprints change
   const handleFootprintsChange = (updatedFootprints: Footprint[]) => {
+    console.log("Footprints updated:", updatedFootprints.length);
     setFootprints(updatedFootprints)
     // Here you could add logic to convert footprints to actual cabinets or other objects
   }
@@ -83,11 +96,12 @@ function Scene() {
 
       {/* Background plane for mouse interaction */}
       <mesh
+        ref={backgroundPlaneRef}
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, -0.01, 0]}
         receiveShadow
         name="background-plane"
-        onClick={handleBackgroundClick}
+        onClick={toolMode === 'layout' ? undefined : handleBackgroundClick}
       >
         <planeGeometry args={[100, 100]} />
         <shadowMaterial transparent opacity={0.2} />
@@ -95,7 +109,10 @@ function Scene() {
       
       {/* Footprint Editor - only shows when in layout mode */}
       {toolMode === 'layout' && (
-        <FootprintManager onFootprintsChange={handleFootprintsChange} />
+        <FootprintManager 
+          onFootprintsChange={handleFootprintsChange} 
+          backgroundPlane={backgroundPlaneRef.current} 
+        />
       )}
 
       <OrbitControls
