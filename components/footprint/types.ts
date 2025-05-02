@@ -54,4 +54,5 @@ export type FootprintManagerProps = {
   selectedFootprint: string | null;
   onFootprintsChange: (footprints: Footprint[]) => void;
   onSelectFootprint: (id: string | null) => void;
+  defaultHeight?: number;
 } 

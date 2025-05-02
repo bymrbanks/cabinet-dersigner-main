@@ -61,6 +61,73 @@ export default function FootprintBox({
     }
   }, [toolMode, setCursor])
   
+  // Create edge highlights for visual feedback
+  const renderEdgeHighlights = useCallback(() => {
+    if (!isSelected) return null
+    
+    const lineWidth = 0.06
+    
+    return (
+      <>
+        {/* Top edge */}
+        <mesh position={[0, 0.03, -depth/2]}>
+          <planeGeometry args={[width, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'top' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'top' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Bottom edge */}
+        <mesh position={[0, 0.03, depth/2]}>
+          <planeGeometry args={[width, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'bottom' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'bottom' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Left edge */}
+        <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+          <planeGeometry args={[depth, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'left' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'left' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Right edge */}
+        <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+          <planeGeometry args={[depth, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'right' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'right' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Height handle - more visible on top of the box */}
+        <mesh position={[0, height, 0]}>
+          <planeGeometry args={[width * 0.8, depth * 0.8]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'height' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'height' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Height handle edge outline */}
+        <lineSegments position={[0, height, 0]}>
+          <edgesGeometry args={[new THREE.PlaneGeometry(width * 0.8, depth * 0.8)]} />
+          <lineBasicMaterial color="#FF4500" linewidth={2} />
+        </lineSegments>
+      </>
+    )
+  }, [isSelected, width, depth, height, hoveredEdge])
+  
   // Handle pointer move to detect edge proximity
   const handlePointerMove = useCallback((e: any) => {
     if (!isSelected || toolMode !== 'select') {
@@ -76,17 +143,21 @@ export default function FootprintBox({
     // Proximity threshold
     const threshold = 0.4
     
+    // Check if we're near the top of the box for height adjustment
+    // Make height detection more generous to make it easier to grab
+    const distToHeight = Math.abs(localPoint.y - height/2)
+    const isNearHeightHandle = localPoint.y > height/2 - threshold && 
+                             Math.abs(localPoint.x) < width/2 * 0.8 &&
+                             Math.abs(localPoint.z) < depth/2 * 0.8
+    
     // Distance to edges
     const distToTop = Math.abs(localPoint.z - (-depth/2))
     const distToBottom = Math.abs(localPoint.z - depth/2)
     const distToLeft = Math.abs(localPoint.x - (-width/2))
     const distToRight = Math.abs(localPoint.x - width/2)
-    // Check if we're near the top of the box for height adjustment
-    const distToHeight = Math.abs(localPoint.y - height/2)
     
-    // Find the closest edge - prioritize in this order
-    if (distToHeight < threshold && distToHeight <= distToTop && distToHeight <= distToBottom && 
-        distToHeight <= distToLeft && distToHeight <= distToRight) {
+    // Find the closest edge - prioritize height handle
+    if (isNearHeightHandle) {
       setHoveredEdge('height')
       setCursor("ns-resize")
     } else if (distToTop < threshold && distToTop <= distToBottom && distToTop <= distToLeft && distToTop <= distToRight) {
@@ -149,67 +220,6 @@ export default function FootprintBox({
       onDragStart(e, id, isDuplicate)
     }
   }, [isSelected, toolMode, hoveredEdge, onResizeStart, onDragStart, id, setCursor])
-  
-  // Create edge highlights for visual feedback
-  const renderEdgeHighlights = useCallback(() => {
-    if (!isSelected) return null
-    
-    const lineWidth = 0.06
-    
-    return (
-      <>
-        {/* Top edge */}
-        <mesh position={[0, 0.03, -depth/2]}>
-          <planeGeometry args={[width, lineWidth]} />
-          <meshStandardMaterial 
-            color={hoveredEdge === 'top' ? "#FF0000" : "#FF8C00"} 
-            transparent 
-            opacity={hoveredEdge === 'top' ? 0.8 : 0.5} 
-          />
-        </mesh>
-        
-        {/* Bottom edge */}
-        <mesh position={[0, 0.03, depth/2]}>
-          <planeGeometry args={[width, lineWidth]} />
-          <meshStandardMaterial 
-            color={hoveredEdge === 'bottom' ? "#FF0000" : "#FF8C00"} 
-            transparent 
-            opacity={hoveredEdge === 'bottom' ? 0.8 : 0.5} 
-          />
-        </mesh>
-        
-        {/* Left edge */}
-        <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
-          <planeGeometry args={[depth, lineWidth]} />
-          <meshStandardMaterial 
-            color={hoveredEdge === 'left' ? "#FF0000" : "#FF8C00"} 
-            transparent 
-            opacity={hoveredEdge === 'left' ? 0.8 : 0.5} 
-          />
-        </mesh>
-        
-        {/* Right edge */}
-        <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
-          <planeGeometry args={[depth, lineWidth]} />
-          <meshStandardMaterial 
-            color={hoveredEdge === 'right' ? "#FF0000" : "#FF8C00"} 
-            transparent 
-            opacity={hoveredEdge === 'right' ? 0.8 : 0.5} 
-          />
-        </mesh>
-        
-        {/* Height handle */}
-        <mesh position={[0, height/2, 0]}>
-          <planeGeometry args={[width, lineWidth]} />
-          <meshStandardMaterial 
-            color={hoveredEdge === 'height' ? "#FF0000" : "#FF8C00"} 
-            transparent 
-            opacity={hoveredEdge === 'height' ? 0.8 : 0.5} 
-          />
-        </mesh>
-      </>
-    )
-  }, [isSelected, width, depth, height, hoveredEdge])
   
   return (
     <group 

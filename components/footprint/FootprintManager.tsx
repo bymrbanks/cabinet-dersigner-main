@@ -320,10 +320,14 @@ export const useFootprintManager = ({
       switch(resizeState.corner) {
         case 'top': // Height resize
           // Only change height, not width or depth
-          newHeight = Math.max(minSize, resizeState.startDimensions.height + deltaY * 2)
+          // Make height adjustment more direct (1:1 with mouse movement)
+          newHeight = Math.max(minSize, resizeState.startDimensions.height + deltaY)
           
-          // Make sure height is positive but don't constrain to grid
-          newHeight = Math.max(minSize, newHeight)
+          // Set a reasonable max height limit
+          const maxHeight = 10;
+          newHeight = Math.min(maxHeight, Math.max(minSize, newHeight))
+          
+          console.log("Height resizing, deltaY:", deltaY, "new height:", newHeight);
           
           // Don't update position for height changes
           break
@@ -555,7 +559,8 @@ export default function FootprintManager({
   footprints,
   selectedFootprint,
   onFootprintsChange,
-  onSelectFootprint
+  onSelectFootprint,
+  defaultHeight = 2 // Default value if not provided
 }: FootprintManagerProps) {
   const [state, actions] = useFootprintManager({
     orbitControlsRef,
@@ -586,7 +591,7 @@ export default function FootprintManager({
       // Make sure the footprint will fit in the grid
       const footprintWidth = 3;
       const footprintDepth = 3;
-      const footprintHeight = 2; // Default height for new footprints
+      const footprintHeight = defaultHeight; // Use the prop value
       
       // Convert world position to grid position (0,0 at corner)
       const gridClickPosition = worldToGridPosition([e.point.x, e.point.y, e.point.z], footprintWidth, footprintDepth);
