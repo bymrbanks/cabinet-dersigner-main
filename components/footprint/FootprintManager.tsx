@@ -117,7 +117,7 @@ export const useFootprintManager = ({
     }
     
     // Select the footprint we're now dragging (original or duplicate)
-    setSelectedFootprint(currentId)
+    onSelectFootprint(currentId)
     
     setDragState({
       isDragging: true,
@@ -132,7 +132,7 @@ export const useFootprintManager = ({
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = false
     }
-  }, [toolMode, setCursor, orbitControlsRef, getFootprintById, addFootprint])
+  }, [toolMode, setCursor, orbitControlsRef, getFootprintById, addFootprint, onSelectFootprint])
   
   // Start resizing a footprint from a corner
   const startResize = useCallback((e: any, id: string, corner: ResizeState['corner']) => {
@@ -155,7 +155,7 @@ export const useFootprintManager = ({
     }
     
     // Be sure to set currentFootprint to track what we're resizing
-    setSelectedFootprint(id)
+    onSelectFootprint(id)
     
     // Initialize resize state
     setResizeState({
@@ -176,7 +176,7 @@ export const useFootprintManager = ({
     if (orbitControlsRef.current) {
       orbitControlsRef.current.enabled = false
     }
-  }, [toolMode, getFootprintById, setCursor, orbitControlsRef, setSelectedFootprint])
+  }, [toolMode, getFootprintById, setCursor, orbitControlsRef, onSelectFootprint])
   
   // Handle pointer move for dragging and resizing
   const handlePointerMove = useCallback((e: any) => {
@@ -388,8 +388,8 @@ export const useFootprintManager = ({
     })
     
     // Deselect any selected footprint when changing modes
-    setSelectedFootprint(null)
-  }, [toolMode])
+    onSelectFootprint(null)
+  }, [toolMode, onSelectFootprint])
   
   // Add window event listeners for resize and drag operations
   useEffect(() => {
@@ -505,7 +505,8 @@ export default function FootprintManager({
     
     if (toolMode === 'layout') {
       // Add a new box at the click position
-      actions.addFootprint([e.point.x, 0.01, e.point.z])
+      const newId = actions.addFootprint([e.point.x, 0.01, e.point.z])
+      actions.selectFootprint(newId)
     } else {
       // In select mode, deselect the current footprint
       actions.selectFootprint(null)
