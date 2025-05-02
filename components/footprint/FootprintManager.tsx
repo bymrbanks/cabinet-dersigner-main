@@ -213,101 +213,78 @@ export const useFootprintManager = ({
       const gridSize = 50 // Half the grid size
       const minSize = 0.5 // Minimum box size
       
-      // Apply different resize logic based on which corner is being dragged
+      // Single directional resizing based on the corner
+      // We're using the corner field for edge compatibility
       switch(resizeState.corner) {
-        case 'topLeft':
-          // Width: decrease when dragging left, increase when dragging right
-          // Depth: decrease when dragging up, increase when dragging down
-          newWidth = Math.max(minSize, resizeState.startDimensions.width - deltaX * 2)
+        case 'topLeft': // Top edge resize
+          // Only change depth, not width
           newDepth = Math.max(minSize, resizeState.startDimensions.depth - deltaZ * 2)
           
-          // Update position to keep the opposite corner fixed
+          // Update position to keep the bottom edge fixed
           newPosition = [
-            resizeState.startBoxPosition[0] + (resizeState.startDimensions.width - newWidth) / 2,
+            resizeState.startBoxPosition[0],
             resizeState.startBoxPosition[1],
             resizeState.startBoxPosition[2] + (resizeState.startDimensions.depth - newDepth) / 2
           ]
           
-          // Check if the new position would put the box outside the grid
-          if (newPosition[0] - newWidth/2 < -gridSize) {
-            newWidth = (newPosition[0] + gridSize) * 2
-            newPosition[0] = -gridSize + newWidth/2
-          }
+          // Check grid constraints for top edge
           if (newPosition[2] - newDepth/2 < -gridSize) {
             newDepth = (newPosition[2] + gridSize) * 2
             newPosition[2] = -gridSize + newDepth/2
           }
           break
           
-        case 'topRight':
-          // Width: increase when dragging right, decrease when dragging left
-          // Depth: decrease when dragging up, increase when dragging down
+        case 'topRight': // Right edge resize
+          // Only change width, not depth  
           newWidth = Math.max(minSize, resizeState.startDimensions.width + deltaX * 2)
-          newDepth = Math.max(minSize, resizeState.startDimensions.depth - deltaZ * 2)
           
-          // Update position to keep the opposite corner fixed
+          // Update position to keep the left edge fixed
           newPosition = [
             resizeState.startBoxPosition[0] + (newWidth - resizeState.startDimensions.width) / 2,
             resizeState.startBoxPosition[1],
-            resizeState.startBoxPosition[2] + (resizeState.startDimensions.depth - newDepth) / 2
+            resizeState.startBoxPosition[2]
           ]
           
-          // Check if the new position would put the box outside the grid
+          // Check grid constraints for right edge
           if (newPosition[0] + newWidth/2 > gridSize) {
             newWidth = (gridSize - newPosition[0]) * 2
             newPosition[0] = gridSize - newWidth/2
           }
-          if (newPosition[2] - newDepth/2 < -gridSize) {
-            newDepth = (newPosition[2] + gridSize) * 2
-            newPosition[2] = -gridSize + newDepth/2
+          break
+          
+        case 'bottomLeft': // Bottom edge resize
+          // Only change depth, not width
+          newDepth = Math.max(minSize, resizeState.startDimensions.depth + deltaZ * 2)
+          
+          // Update position to keep the top edge fixed
+          newPosition = [
+            resizeState.startBoxPosition[0],
+            resizeState.startBoxPosition[1],
+            resizeState.startBoxPosition[2] + (newDepth - resizeState.startDimensions.depth) / 2
+          ]
+          
+          // Check grid constraints for bottom edge
+          if (newPosition[2] + newDepth/2 > gridSize) {
+            newDepth = (gridSize - newPosition[2]) * 2
+            newPosition[2] = gridSize - newDepth/2
           }
           break
           
-        case 'bottomLeft':
-          // Width: decrease when dragging left, increase when dragging right
-          // Depth: increase when dragging down, decrease when dragging up
+        case 'bottomRight': // Left edge resize
+          // Only change width, not depth
           newWidth = Math.max(minSize, resizeState.startDimensions.width - deltaX * 2)
-          newDepth = Math.max(minSize, resizeState.startDimensions.depth + deltaZ * 2)
           
-          // Update position to keep the opposite corner fixed
+          // Update position to keep the right edge fixed
           newPosition = [
             resizeState.startBoxPosition[0] + (resizeState.startDimensions.width - newWidth) / 2,
             resizeState.startBoxPosition[1],
-            resizeState.startBoxPosition[2] + (newDepth - resizeState.startDimensions.depth) / 2
+            resizeState.startBoxPosition[2]
           ]
           
-          // Check if the new position would put the box outside the grid
+          // Check grid constraints for left edge
           if (newPosition[0] - newWidth/2 < -gridSize) {
             newWidth = (newPosition[0] + gridSize) * 2
             newPosition[0] = -gridSize + newWidth/2
-          }
-          if (newPosition[2] + newDepth/2 > gridSize) {
-            newDepth = (gridSize - newPosition[2]) * 2
-            newPosition[2] = gridSize - newDepth/2
-          }
-          break
-          
-        case 'bottomRight':
-          // Width: increase when dragging right, decrease when dragging left
-          // Depth: increase when dragging down, decrease when dragging up
-          newWidth = Math.max(minSize, resizeState.startDimensions.width + deltaX * 2)
-          newDepth = Math.max(minSize, resizeState.startDimensions.depth + deltaZ * 2)
-          
-          // Update position to keep the opposite corner fixed
-          newPosition = [
-            resizeState.startBoxPosition[0] + (newWidth - resizeState.startDimensions.width) / 2,
-            resizeState.startBoxPosition[1],
-            resizeState.startBoxPosition[2] + (newDepth - resizeState.startDimensions.depth) / 2
-          ]
-          
-          // Check if the new position would put the box outside the grid
-          if (newPosition[0] + newWidth/2 > gridSize) {
-            newWidth = (gridSize - newPosition[0]) * 2
-            newPosition[0] = gridSize - newWidth/2
-          }
-          if (newPosition[2] + newDepth/2 > gridSize) {
-            newDepth = (gridSize - newPosition[2]) * 2
-            newPosition[2] = gridSize - newDepth/2
           }
           break
       }

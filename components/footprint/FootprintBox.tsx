@@ -5,6 +5,9 @@ import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { Footprint, ResizeState } from './types'
 
+// Define the edge types for single-direction resizing
+type Edge = 'top' | 'bottom' | 'left' | 'right' | null;
+
 interface FootprintBoxProps {
   footprint: Footprint
   isSelected: boolean
@@ -32,7 +35,7 @@ export default function FootprintBox({
   const opacity = isSelected ? 0.6 : 0.4
   
   // Track which edge is being hovered
-  const [hoveredEdge, setHoveredEdge] = useState<ResizeState['corner'] | null>(null)
+  const [hoveredEdge, setHoveredEdge] = useState<Edge>(null)
   
   // Handle box hover
   const handleBoxHover = useCallback(() => {
@@ -48,16 +51,6 @@ export default function FootprintBox({
     }
   }, [toolMode, setCursor])
   
-  // Calculate edge positions for edge detection
-  const edges = useMemo(() => {
-    return {
-      topLeft: new THREE.Vector3(-width/2, 0.025, -depth/2),
-      topRight: new THREE.Vector3(width/2, 0.025, -depth/2),
-      bottomLeft: new THREE.Vector3(-width/2, 0.025, depth/2),
-      bottomRight: new THREE.Vector3(width/2, 0.025, depth/2)
-    }
-  }, [width, depth])
-  
   // Handle pointer move to detect edge proximity
   const handlePointerMove = useCallback((e: any) => {
     if (!isSelected || toolMode !== 'select') {
@@ -67,8 +60,6 @@ export default function FootprintBox({
     
     // Get local position of pointer relative to box center
     const localPoint = new THREE.Vector3(e.point.x, e.point.y, e.point.z)
-    // This is necessary to convert from world to local coordinates
-    const worldPoint = new THREE.Vector3(e.point.x, e.point.y, e.point.z)
     const groupPosition = new THREE.Vector3(position[0], position[1], position[2])
     localPoint.sub(groupPosition)
     
@@ -81,30 +72,18 @@ export default function FootprintBox({
     const distToLeft = Math.abs(localPoint.x - (-width/2))
     const distToRight = Math.abs(localPoint.x - width/2)
     
-    // Find closest edge
-    if (distToTop < threshold && distToLeft < threshold) {
-      setHoveredEdge('topLeft')
-      setCursor("nwse-resize")
-    } else if (distToTop < threshold && distToRight < threshold) {
-      setHoveredEdge('topRight')
-      setCursor("nesw-resize")
-    } else if (distToBottom < threshold && distToLeft < threshold) {
-      setHoveredEdge('bottomLeft')
-      setCursor("nesw-resize")
-    } else if (distToBottom < threshold && distToRight < threshold) {
-      setHoveredEdge('bottomRight')
-      setCursor("nwse-resize")
-    } else if (distToTop < threshold) {
-      setHoveredEdge('topRight')
+    // Find the closest edge - prioritize in this order
+    if (distToTop < threshold && distToTop <= distToBottom && distToTop <= distToLeft && distToTop <= distToRight) {
+      setHoveredEdge('top')
       setCursor("ns-resize")
-    } else if (distToBottom < threshold) {
-      setHoveredEdge('bottomLeft')
+    } else if (distToBottom < threshold && distToBottom <= distToTop && distToBottom <= distToLeft && distToBottom <= distToRight) {
+      setHoveredEdge('bottom')
       setCursor("ns-resize")
-    } else if (distToLeft < threshold) {
-      setHoveredEdge('topLeft')
+    } else if (distToLeft < threshold && distToLeft <= distToTop && distToLeft <= distToBottom && distToLeft <= distToRight) {
+      setHoveredEdge('left')
       setCursor("ew-resize")
-    } else if (distToRight < threshold) {
-      setHoveredEdge('bottomRight')
+    } else if (distToRight < threshold && distToRight <= distToTop && distToRight <= distToBottom && distToRight <= distToLeft) {
+      setHoveredEdge('right')
       setCursor("ew-resize")
     } else {
       setHoveredEdge(null)
@@ -119,7 +98,27 @@ export default function FootprintBox({
     if (hoveredEdge) {
       e.stopPropagation()
       console.log(`Starting resize with edge ${hoveredEdge}`)
-      onResizeStart(e, id, hoveredEdge)
+      
+      // Map edge to corner for compatibility with existing resize logic
+      let corner: ResizeState['corner'];
+      switch(hoveredEdge) {
+        case 'top':
+          corner = 'topLeft'; // Using topLeft for top edge
+          break;
+        case 'right':
+          corner = 'topRight'; // Using topRight for right edge
+          break;
+        case 'bottom':
+          corner = 'bottomLeft'; // Using bottomLeft for bottom edge
+          break;
+        case 'left':
+          corner = 'bottomRight'; // Using bottomRight for left edge
+          break;
+        default:
+          return;
+      }
+      
+      onResizeStart(e, id, corner)
     } else {
       onDragStart(e, id)
     }
@@ -129,98 +128,49 @@ export default function FootprintBox({
   const renderEdgeHighlights = useCallback(() => {
     if (!isSelected) return null
     
-    // Calculate geometry for highlighted edges
-    const createEdgeGeometry = (corner: ResizeState['corner']) => {
-      const lineWidth = 0.06
-      let geometry, position, rotation, size
-      
-      switch(corner) {
-        case 'topLeft':
-          // For top-left, highlight both top and left edges
-          return (
-            <>
-              {/* Left edge */}
-              <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
-                <planeGeometry args={[depth, lineWidth]} />
-                <meshStandardMaterial color={hoveredEdge === 'topLeft' ? "#FF0000" : "#FF8C00"} 
-                  transparent opacity={hoveredEdge === 'topLeft' ? 0.8 : 0.5} />
-              </mesh>
-              {/* Top edge */}
-              <mesh position={[0, 0.03, -depth/2]}>
-                <planeGeometry args={[width, lineWidth]} />
-                <meshStandardMaterial color={hoveredEdge === 'topLeft' ? "#FF0000" : "#FF8C00"} 
-                  transparent opacity={hoveredEdge === 'topLeft' ? 0.8 : 0.5} />
-              </mesh>
-            </>
-          )
-        case 'topRight':
-          return (
-            <>
-              {/* Right edge */}
-              <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
-                <planeGeometry args={[depth, lineWidth]} />
-                <meshStandardMaterial color={hoveredEdge === 'topRight' ? "#FF0000" : "#FF8C00"} 
-                  transparent opacity={hoveredEdge === 'topRight' ? 0.8 : 0.5} />
-              </mesh>
-              {/* Top edge - only if not already highlighted by topLeft */}
-              {hoveredEdge !== 'topLeft' && (
-                <mesh position={[0, 0.03, -depth/2]}>
-                  <planeGeometry args={[width, lineWidth]} />
-                  <meshStandardMaterial color={hoveredEdge === 'topRight' ? "#FF0000" : "#FF8C00"} 
-                    transparent opacity={hoveredEdge === 'topRight' ? 0.8 : 0.5} />
-                </mesh>
-              )}
-            </>
-          )
-        case 'bottomLeft':
-          return (
-            <>
-              {/* Left edge - only if not already highlighted by topLeft */}
-              {hoveredEdge !== 'topLeft' && (
-                <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
-                  <planeGeometry args={[depth, lineWidth]} />
-                  <meshStandardMaterial color={hoveredEdge === 'bottomLeft' ? "#FF0000" : "#FF8C00"} 
-                    transparent opacity={hoveredEdge === 'bottomLeft' ? 0.8 : 0.5} />
-                </mesh>
-              )}
-              {/* Bottom edge */}
-              <mesh position={[0, 0.03, depth/2]}>
-                <planeGeometry args={[width, lineWidth]} />
-                <meshStandardMaterial color={hoveredEdge === 'bottomLeft' ? "#FF0000" : "#FF8C00"} 
-                  transparent opacity={hoveredEdge === 'bottomLeft' ? 0.8 : 0.5} />
-              </mesh>
-            </>
-          )
-        case 'bottomRight':
-          return (
-            <>
-              {/* Right edge - only if not already highlighted by topRight */}
-              {hoveredEdge !== 'topRight' && (
-                <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
-                  <planeGeometry args={[depth, lineWidth]} />
-                  <meshStandardMaterial color={hoveredEdge === 'bottomRight' ? "#FF0000" : "#FF8C00"} 
-                    transparent opacity={hoveredEdge === 'bottomRight' ? 0.8 : 0.5} />
-                </mesh>
-              )}
-              {/* Bottom edge - only if not already highlighted by bottomLeft */}
-              {hoveredEdge !== 'bottomLeft' && (
-                <mesh position={[0, 0.03, depth/2]}>
-                  <planeGeometry args={[width, lineWidth]} />
-                  <meshStandardMaterial color={hoveredEdge === 'bottomRight' ? "#FF0000" : "#FF8C00"} 
-                    transparent opacity={hoveredEdge === 'bottomRight' ? 0.8 : 0.5} />
-                </mesh>
-              )}
-            </>
-          )
-      }
-    }
+    const lineWidth = 0.06
     
     return (
       <>
-        {createEdgeGeometry('topLeft')}
-        {createEdgeGeometry('topRight')}
-        {createEdgeGeometry('bottomLeft')}
-        {createEdgeGeometry('bottomRight')}
+        {/* Top edge */}
+        <mesh position={[0, 0.03, -depth/2]}>
+          <planeGeometry args={[width, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'top' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'top' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Bottom edge */}
+        <mesh position={[0, 0.03, depth/2]}>
+          <planeGeometry args={[width, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'bottom' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'bottom' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Left edge */}
+        <mesh position={[-width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+          <planeGeometry args={[depth, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'left' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'left' ? 0.8 : 0.5} 
+          />
+        </mesh>
+        
+        {/* Right edge */}
+        <mesh position={[width/2, 0.03, 0]} rotation={[0, 0, Math.PI/2]}>
+          <planeGeometry args={[depth, lineWidth]} />
+          <meshStandardMaterial 
+            color={hoveredEdge === 'right' ? "#FF0000" : "#FF8C00"} 
+            transparent 
+            opacity={hoveredEdge === 'right' ? 0.8 : 0.5} 
+          />
+        </mesh>
       </>
     )
   }, [isSelected, width, depth, hoveredEdge])
