@@ -1,20 +1,52 @@
 "use client"
 
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Environment, Text } from "@react-three/drei"
-import { Suspense, useEffect, useRef, useState } from "react"
+import { OrbitControls, Environment } from "@react-three/drei"
+import { Suspense, useEffect, useRef, useState, useCallback } from "react"
 import Grid from "./grids/grid"
 import SideWallGrid from "./grids/side-wall-grid"
 import BackWallGrid from "./grids/back-wall-grid"
 import FootprintManager, { Footprint } from "./cabinet/FootprintManager"
 import { useBlankStore } from "@/store/blank-store"
-import ToolbarFloating from "./ToolbarFloating"
+import ToolbarFloating, { useToolbarState, ToolMode } from "./ToolbarFloating"
 
 function Scene() {
   const orbitControlsRef = useRef<any>(null)
   const { setSelectedPart } = useBlankStore()
-  const [showFootprintEditor, setShowFootprintEditor] = useState(false)
   const [footprints, setFootprints] = useState<Footprint[]>([])
+  const [toolMode, setToolMode] = useState<ToolMode>('select')
+  
+  // Handle toolbar mode changes
+  const handleToolModeChange = useCallback((mode: ToolMode) => {
+    setToolMode(mode)
+    
+    // When switching to layout mode, disable orbit controls
+    if (orbitControlsRef.current) {
+      if (mode === 'layout') {
+        orbitControlsRef.current.enabled = false;
+      } else {
+        orbitControlsRef.current.enabled = true;
+      }
+    }
+  }, []);
+  
+  // Subscribe to toolbar state changes
+  useToolbarState(handleToolModeChange);
+  
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && toolMode === 'layout') {
+        // Exit layout mode when Escape is pressed
+        handleToolModeChange('select');
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toolMode, handleToolModeChange]);
 
   // Handle background click
   const handleBackgroundClick = (e: any) => {
@@ -61,30 +93,10 @@ function Scene() {
         <shadowMaterial transparent opacity={0.2} />
       </mesh>
       
-      {/* Footprint Editor */}
-      {showFootprintEditor && (
+      {/* Footprint Editor - only shows when in layout mode */}
+      {toolMode === 'layout' && (
         <FootprintManager onFootprintsChange={handleFootprintsChange} />
       )}
-
-      {/* Footprint Editor Toggle Button */}
-      <group position={[9, 0.1, 9]}>
-        <mesh 
-          position={[0, 0, 0]} 
-          onClick={() => setShowFootprintEditor(!showFootprintEditor)}
-        >
-          <boxGeometry args={[2, 0.1, 0.5]} />
-          <meshStandardMaterial color={showFootprintEditor ? "#E91E63" : "#3F51B5"} />
-        </mesh>
-        <Text
-          position={[0, 0.15, 0]}
-          fontSize={0.15}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {showFootprintEditor ? "Exit Layout Mode" : "Enter Layout Mode"}
-        </Text>
-      </group>
 
       <OrbitControls
         ref={orbitControlsRef}
