@@ -17,6 +17,7 @@ interface CabinetProps {
   height: number
   depth: number
   type: "base" | "wall"
+  rotation?: number // Rotation in degrees for L-shaped layouts
   compartments: Array<{ 
     sections: Array<{ type: "door" | "drawer"; height: number }>;
     shelves: number[] 
@@ -31,6 +32,7 @@ export default function Cabinet({
   height,
   depth,
   type,
+  rotation = 0, // Default to 0 if not provided
   compartments = [],
   materialColor,
 }: CabinetProps) {
@@ -57,6 +59,9 @@ export default function Cabinet({
 
       // Set position directly in the useEffect to avoid read-only property issues
       cabinetRef.current.position.set(position[0], position[1], position[2])
+      
+      // Apply rotation in radians (convert from degrees)
+      cabinetRef.current.rotation.y = (rotation * Math.PI) / 180;
 
       // Make sure all children have proper names too
       cabinetRef.current.traverse((child) => {
@@ -65,7 +70,7 @@ export default function Cabinet({
         }
       })
     }
-  }, [id, position])
+  }, [id, position, rotation])
 
   // Calculate internal dimensions
   const thickness = scaledThickness

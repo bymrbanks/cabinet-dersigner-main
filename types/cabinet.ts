@@ -30,6 +30,7 @@ export interface Cabinet {
   height: number
   depth: number
   type: "base" | "wall"
+  rotation?: number // Rotation in degrees for L-shaped layouts
   compartments: CabinetCompartment[]
   materialColor: string
   defaultHandleConfig: HandleConfig
@@ -54,7 +55,13 @@ export interface CabinetStoreState {
   toggleAllOpenState: (isOpen: boolean) => void
 
   // Cabinet operations
-  addCabinet: (position?: [number, number, number], width?: number, depth?: number) => void
+  addCabinet: (
+    position?: [number, number, number], 
+    width?: number, 
+    depth?: number, 
+    type?: "base" | "wall",
+    rotationDegrees?: number
+  ) => void
   removeCabinet: (id: string) => void
   duplicateCabinet: (id: string) => void
   moveCabinet: (id: string, position: [number, number, number]) => void

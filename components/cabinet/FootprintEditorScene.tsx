@@ -17,16 +17,31 @@ export default function FootprintEditorScene({ onExit }: FootprintEditorScenePro
   const handleSave = (zones: CabinetZone[]) => {
     // Convert 2D zones to 3D cabinets
     zones.forEach(zone => {
+      // Calculate position based on rotation
+      const rotation = zone.rotation || 0;
+      
       // Convert footprint coordinates to 3D position
       // Assuming Y is up in 3D space and Z is depth
       const position: [number, number, number] = [
         zone.x + zone.width / 2, // Center X
-        0, // Ground level
+        0, // Ground level (base cabinets) or higher (wall cabinets)
         zone.y + zone.depth / 2, // Center Z
       ];
       
+      // For wall cabinets, set a higher Y position
+      if (zone.type === 'wall') {
+        position[1] = 720; // Typical base cabinet height
+      }
+      
       // Add a new cabinet at the position with the given dimensions
-      addCabinet(position, zone.width, zone.depth);
+      // and set the type (base or wall)
+      addCabinet(
+        position, 
+        zone.width, 
+        zone.depth, 
+        zone.type,
+        Math.round(rotation * 180 / Math.PI) // Convert rotation to degrees
+      );
     });
     
     toast({
@@ -47,6 +62,18 @@ export default function FootprintEditorScene({ onExit }: FootprintEditorScenePro
           Exit 2D Mode
         </button>
         <div className="text-sm my-auto">Double-click a cabinet to remove it</div>
+      </div>
+      
+      <div className="absolute top-4 right-4 z-20 bg-white p-2 rounded-md shadow-md">
+        <div className="text-sm">
+          <p className="font-bold">Controls:</p>
+          <p>• Click the "Add..." button to create a cabinet</p>
+          <p>• Toggle Rotation mode to rotate cabinets</p>
+          <p>• Drag blue handles to resize</p>
+          <p>• Drag center handle to move</p>
+          <p>• Blue cabinets = Wall cabinets</p>
+          <p>• Light blue cabinets = Base cabinets</p>
+        </div>
       </div>
       
       <Canvas orthographic camera={{ zoom: 1, position: [0, 0, 100] }}>

@@ -102,19 +102,26 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
   },
 
   // Cabinet operations
-  addCabinet: (position?: [number, number, number], width?: number, depth?: number) => {
+  addCabinet: (
+    position?: [number, number, number], 
+    width?: number, 
+    depth?: number, 
+    type: "base" | "wall" = "base",
+    rotationDegrees: number = 0
+  ) => {
     const newCabinet: Cabinet = {
       id: `cabinet-${uuidv4()}`,
       position: position || [0, 0, 0],
       width: width || 600, // Default width if not specified
-      height: 720,
-      depth: depth || 580, // Default depth if not specified
-      type: "base",
+      height: type === "wall" ? 600 : 720, // Wall cabinets are typically shorter
+      depth: depth || (type === "wall" ? 350 : 580), // Wall cabinets are typically less deep
+      type,
+      rotation: rotationDegrees, // Add rotation property to handle L-shaped layouts
       compartments: [
         {
           sections: [
             { type: "drawer", height: 200 },
-            { type: "door", height: 520 },
+            { type: "door", height: type === "wall" ? 400 : 520 },
           ],
           shelves: [50], // Default shelf at 50% height
         },
