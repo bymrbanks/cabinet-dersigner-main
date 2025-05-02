@@ -17,15 +17,16 @@ export default function SideWallGrid({
   // Create a custom grid for the side wall (XY plane)
   const sideWallGrid = useMemo(() => {
     try {
-      // Create a grid geometry
-      const gridGeometry = new THREE.PlaneGeometry(size, size)
+      // Create a grid geometry with divisions
+      const gridGeometry = new THREE.PlaneGeometry(size, size, divisions, divisions)
       
       // Create a grid material with a grid pattern
       const gridMaterial = new THREE.MeshBasicMaterial({
         color: color,
-        opacity: 0.2,
+        opacity: 0.4,
         transparent: true,
         wireframe: true,
+        side: THREE.DoubleSide
       })
       
       return new THREE.Mesh(gridGeometry, gridMaterial)
@@ -33,9 +34,10 @@ export default function SideWallGrid({
       console.error("Error creating side wall grid:", error)
       return null
     }
-  }, [size, color])
+  }, [size, divisions, color])
 
   if (!sideWallGrid) return null
 
-  return <primitive object={sideWallGrid} position={[-54, size/2, 0]} rotation={[0, Math.PI/2, 0]} />
+  // Position at the edge of the grid (half the size to the left)
+  return <primitive object={sideWallGrid} position={[-size/2, size/2, 0]} rotation={[0, Math.PI/2, 0]} />
 } 

@@ -12,17 +12,20 @@ interface GridProps {
 export default function Grid({ 
   size = 108, 
   divisions = 36,
-  color = "#CCCCCC"
+  color = "#999999"
 }: GridProps) {
   // Create a simple grid helper
   const grid = useMemo(() => {
     try {
-      const grid = new THREE.GridHelper(size, divisions, color, color)
+      // Create grid with darker color for better visibility
+      const mainColor = color
+      const secondaryColor = "#666666"
+      const grid = new THREE.GridHelper(size, divisions, secondaryColor, mainColor)
 
-      // Make the grid semi-transparent
+      // Make the grid more visible
       if (grid.material) {
         const material = Array.isArray(grid.material) ? grid.material[0] : grid.material
-        material.opacity = 0.5
+        material.opacity = 0.8
         material.transparent = true
       }
 
