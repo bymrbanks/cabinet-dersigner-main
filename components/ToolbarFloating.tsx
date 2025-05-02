@@ -47,15 +47,21 @@ export interface ToolbarState {
 }
 
 // Create a central store for toolbar state
-let toolbarState: ToolbarState = {
+export let toolbarState: ToolbarState = {
   toolMode: 'select',
   setToolMode: (mode: ToolMode) => {
+    console.log("Toolbar state: Setting mode to", mode);
     toolbarState.toolMode = mode
     if (toolbarState.listeners.length > 0) {
       toolbarState.listeners.forEach(listener => listener(mode))
     }
   },
   listeners: [] as Array<(mode: ToolMode) => void>
+}
+
+// Function to get the current tool mode without using hooks
+export const getCurrentToolMode = (): ToolMode => {
+  return toolbarState.toolMode;
 }
 
 // Function to subscribe to toolbar state changes
