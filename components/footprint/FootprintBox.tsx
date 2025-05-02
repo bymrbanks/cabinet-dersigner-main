@@ -70,23 +70,23 @@ export default function FootprintBox({
   
   // Create a corner trigger for resizing
   const createCornerTrigger = useCallback((corner: ResizeState['corner']) => {
-    const handleSize = 0.6
+    const handleSize = 0.8 // Larger handle for easier use
     
     // Position the handle at the appropriate corner
     let cornerPosition: [number, number, number] = [0, 0, 0]
     
     switch(corner) {
       case 'topLeft':
-        cornerPosition = [-width/2, 0.05, -depth/2]
+        cornerPosition = [-width/2, 0.1, -depth/2]
         break
       case 'topRight':
-        cornerPosition = [width/2, 0.05, -depth/2]
+        cornerPosition = [width/2, 0.1, -depth/2]
         break
       case 'bottomLeft':
-        cornerPosition = [-width/2, 0.05, depth/2]
+        cornerPosition = [-width/2, 0.1, depth/2]
         break
       case 'bottomRight':
-        cornerPosition = [width/2, 0.05, depth/2]
+        cornerPosition = [width/2, 0.1, depth/2]
         break
     }
     
@@ -96,13 +96,17 @@ export default function FootprintBox({
         position={cornerPosition}
         onPointerDown={(e) => {
           e.stopPropagation()
+          console.log(`Corner ${corner} clicked for footprint ${id}`)
           onResizeStart(e, id, corner)
+          // Prevent any parent events from firing
+          e.stopPropagation()
         }}
         onPointerOver={() => handleCornerHover(corner)}
         onPointerOut={handleCornerUnhover}
+        onClick={(e) => e.stopPropagation()} // Stop click event from reaching parent
       >
         <sphereGeometry args={[handleSize/2, 16, 16]} />
-        <meshStandardMaterial color="#FF0000" transparent opacity={0.7} />
+        <meshStandardMaterial color="#FF0000" transparent opacity={0.9} />
       </mesh>
     )
   }, [id, width, depth, onResizeStart, handleCornerHover, handleCornerUnhover])

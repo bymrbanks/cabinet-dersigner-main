@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { Footprint, DragState, ResizeState, FootprintState, FootprintActions, FootprintManagerProps } from './types'
 import FootprintBox from './FootprintBox'
 
@@ -105,14 +105,19 @@ export const useFootprintManager = ({
     
     // Don't start resizing if we're in layout mode
     if (toolMode !== 'select') {
+      console.log("Not starting resize - not in select mode");
       return
     }
     
     console.log("Starting resize for footprint:", id, "corner:", corner)
     console.log("Corner click position:", e.point)
+    console.log("Current tool mode:", toolMode)
     
     const footprint = getFootprintById(id)
-    if (!footprint) return
+    if (!footprint) {
+      console.error("Footprint not found:", id);
+      return;
+    }
     
     // Be sure to set currentFootprint to track what we're resizing
     setSelectedFootprint(id)
@@ -140,6 +145,8 @@ export const useFootprintManager = ({
   
   // Handle pointer move for dragging and resizing
   const handlePointerMove = useCallback((e: any) => {
+    console.log("Pointer move fired!", e.point);
+    
     // Handle dragging
     if (dragState.isDragging && dragState.startPosition && dragState.currentFootprint) {
       const footprint = getFootprintById(dragState.currentFootprint)
@@ -424,7 +431,10 @@ export default function FootprintManager({
   }
   
   return (
-    <>
+    <group
+      onPointerMove={actions.handlePointerMove}
+      onPointerUp={actions.handlePointerUp}
+    >
       {/* Background plane for mouse interaction */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
@@ -432,8 +442,7 @@ export default function FootprintManager({
         receiveShadow
         name="background-plane"
         onClick={handlePlaneClick}
-        onPointerMove={actions.handlePointerMove}
-        onPointerUp={actions.handlePointerUp}
+        pointerEvents="all"
       >
         <planeGeometry args={[100, 100]} />
         <shadowMaterial transparent opacity={0.2} />
@@ -453,6 +462,6 @@ export default function FootprintManager({
           setCursor={setCursor}
         />
       ))}
-    </>
+    </group>
   )
 } 
