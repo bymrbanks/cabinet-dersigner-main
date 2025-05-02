@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei"
-import { Suspense, useEffect, useRef } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import Cabinet from "./cabinet/cabinet"
 import Grid from "./cabinet/grid"
 import TransformControls from "./cabinet/transform-controls"
@@ -11,6 +11,7 @@ import { Download, Camera, Undo, Redo, Ruler, GridIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useCabinetStore } from "@/store/cabinet-store"
 import ToolbarFloating from "./ToolbarFloating"
+import FootprintEditorScene from "./cabinet/FootprintEditorScene"
 
 function Scene() {
   const { toast } = useToast()
@@ -132,6 +133,7 @@ function Scene() {
 
 export default function CabinetDesigner() {
   const { toast } = useToast()
+  const [footprintEditorActive, setFootprintEditorActive] = useState(false)
   const {
     undo,
     redo,
@@ -160,117 +162,134 @@ export default function CabinetDesigner() {
     }
   }, [])
 
+  // Toggle the footprint editor mode
+  const toggleFootprintEditor = () => {
+    setFootprintEditorActive(!footprintEditorActive)
+    if (selectedPart) {
+      setSelectedPart(null)
+    }
+  }
+
   return (
     <div className="relative w-full h-full">
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <Button
-          variant={gridVisible ? "default" : "outline"}
-          size="sm"
-          onClick={() => setGridVisible(!gridVisible)}
-          title={gridVisible ? "Hide grid" : "Show grid"}
-        >
-          <GridIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={snapToGrid ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSnapToGrid(!snapToGrid)}
-          title={snapToGrid ? "Disable snap" : "Enable snap"}
-        >
-          <GridIcon className="h-4 w-4" />
-          <span className="ml-1">Snap</span>
-        </Button>
-        <Button
-          variant={showDimensionLines ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowDimensionLines(!showDimensionLines)}
-          title={showDimensionLines ? "Hide dimensions" : "Show dimensions"}
-        >
-          <Ruler className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => undo()} disabled={!canUndo()}>
-          <Undo className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => redo()} disabled={!canRedo()}>
-          <Redo className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const canvas = document.querySelector("canvas")
-            if (canvas) {
-              try {
-                const link = document.createElement("a")
-                link.download = "cabinet-screenshot.png"
-                link.href = canvas.toDataURL("image/png")
-                link.click()
+      {footprintEditorActive ? (
+        <FootprintEditorScene onExit={() => setFootprintEditorActive(false)} />
+      ) : (
+        <>
+          <div className="absolute top-4 right-4 z-10 flex gap-2">
+            <Button
+              variant={gridVisible ? "default" : "outline"}
+              size="sm"
+              onClick={() => setGridVisible(!gridVisible)}
+              title={gridVisible ? "Hide grid" : "Show grid"}
+            >
+              <GridIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={snapToGrid ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSnapToGrid(!snapToGrid)}
+              title={snapToGrid ? "Disable snap" : "Enable snap"}
+            >
+              <GridIcon className="h-4 w-4" />
+              <span className="ml-1">Snap</span>
+            </Button>
+            <Button
+              variant={showDimensionLines ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowDimensionLines(!showDimensionLines)}
+              title={showDimensionLines ? "Hide dimensions" : "Show dimensions"}
+            >
+              <Ruler className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => undo()} disabled={!canUndo()}>
+              <Undo className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => redo()} disabled={!canRedo()}>
+              <Redo className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const canvas = document.querySelector("canvas")
+                if (canvas) {
+                  try {
+                    const link = document.createElement("a")
+                    link.download = "cabinet-screenshot.png"
+                    link.href = canvas.toDataURL("image/png")
+                    link.click()
+                    toast({
+                      title: "Screenshot saved",
+                      description: "Your cabinet screenshot has been saved",
+                    })
+                  } catch (error) {
+                    console.error("Error taking screenshot:", error)
+                    toast({
+                      title: "Screenshot failed",
+                      description: "There was an error taking the screenshot",
+                      variant: "destructive",
+                    })
+                  }
+                }
+              }}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              Screenshot
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
                 toast({
-                  title: "Screenshot saved",
-                  description: "Your cabinet screenshot has been saved",
+                  title: "Export feature disabled",
+                  description: "3D export is not available in the preview environment",
                 })
-              } catch (error) {
-                console.error("Error taking screenshot:", error)
-                toast({
-                  title: "Screenshot failed",
-                  description: "There was an error taking the screenshot",
-                  variant: "destructive",
-                })
-              }
-            }
-          }}
-        >
-          <Camera className="h-4 w-4 mr-2" />
-          Screenshot
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            toast({
-              title: "Export feature disabled",
-              description: "3D export is not available in the preview environment",
-            })
-          }}
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export 3D
-        </Button>
-      </div>
-
-      {/* Add Open/Close All buttons */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2 bg-white p-2 rounded-md shadow-md">
-        <Button variant="outline" size="sm" onClick={() => toggleAllOpenState(true)}>
-          Open All
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => toggleAllOpenState(false)}>
-          Close All
-        </Button>
-      </div>
-
-      {/* Selection info panel */}
-      {selectedPart && (
-        <div className="absolute bottom-4 left-4 z-10 bg-white p-3 rounded-md shadow-md max-w-xs">
-          <div className="font-medium mb-1">Selected:</div>
-          <div className="text-sm truncate">{selectedPart}</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {selectedPart.includes("cabinet") && !selectedPart.includes("door") && !selectedPart.includes("drawer")
-              ? "Use transform controls to move cabinet"
-              : selectedPart.includes("door") || selectedPart.includes("drawer")
-                ? "Double-click to open/close"
-                : "Click to customize"}
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export 3D
+            </Button>
           </div>
-        </div>
+
+          {/* Add Open/Close All buttons */}
+          <div className="absolute top-4 left-4 z-10 flex gap-2 bg-white p-2 rounded-md shadow-md">
+            <Button variant="outline" size="sm" onClick={() => toggleAllOpenState(true)}>
+              Open All
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => toggleAllOpenState(false)}>
+              Close All
+            </Button>
+          </div>
+
+          {/* Selection info panel */}
+          {selectedPart && (
+            <div className="absolute bottom-4 left-4 z-10 bg-white p-3 rounded-md shadow-md max-w-xs">
+              <div className="font-medium mb-1">Selected:</div>
+              <div className="text-sm truncate">{selectedPart}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {selectedPart.includes("cabinet") && !selectedPart.includes("door") && !selectedPart.includes("drawer")
+                  ? "Use transform controls to move cabinet"
+                  : selectedPart.includes("door") || selectedPart.includes("drawer")
+                    ? "Double-click to open/close"
+                    : "Click to customize"}
+              </div>
+            </div>
+          )}
+
+          {/* Floating toolbar */}
+          <ToolbarFloating 
+            onToggleFootprintEditor={toggleFootprintEditor}
+            footprintEditorActive={footprintEditorActive}
+          />
+
+          <Canvas shadows camera={{ position: [5, 5, 5], fov: 45 }}>
+            <Suspense fallback={null}>
+              <Scene />
+            </Suspense>
+          </Canvas>
+        </>
       )}
-
-      {/* Floating toolbar */}
-      <ToolbarFloating />
-
-      <Canvas shadows camera={{ position: [5, 5, 5], fov: 45 }}>
-        <Suspense fallback={null}>
-          <Scene />
-        </Suspense>
-      </Canvas>
     </div>
   )
 }

@@ -102,13 +102,13 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
   },
 
   // Cabinet operations
-  addCabinet: (position = [0, 0, 0]) => {
+  addCabinet: (position?: [number, number, number], width?: number, depth?: number) => {
     const newCabinet: Cabinet = {
       id: `cabinet-${uuidv4()}`,
-      position,
-      width: 600,
+      position: position || [0, 0, 0],
+      width: width || 600, // Default width if not specified
       height: 720,
-      depth: 580,
+      depth: depth || 580, // Default depth if not specified
       type: "base",
       compartments: [
         {

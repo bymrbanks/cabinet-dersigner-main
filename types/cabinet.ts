@@ -54,7 +54,7 @@ export interface CabinetStoreState {
   toggleAllOpenState: (isOpen: boolean) => void
 
   // Cabinet operations
-  addCabinet: (position?: [number, number, number]) => void
+  addCabinet: (position?: [number, number, number], width?: number, depth?: number) => void
   removeCabinet: (id: string) => void
   duplicateCabinet: (id: string) => void
   moveCabinet: (id: string, position: [number, number, number]) => void

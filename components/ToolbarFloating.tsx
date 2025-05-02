@@ -4,11 +4,16 @@ import { ChevronDown } from "lucide-react"
 interface ToolbarButtonProps {
   icon: React.ReactNode
   hasDropdown?: boolean
+  active?: boolean
+  onClick?: () => void
 }
 
-const ToolbarButton: React.FC<ToolbarButtonProps> = ({ icon, hasDropdown = false }) => {
+const ToolbarButton: React.FC<ToolbarButtonProps> = ({ icon, hasDropdown = false, active = false, onClick }) => {
   return (
-    <div className="relative flex items-center justify-center w-10 h-10 cursor-pointer hover:bg-gray-100 rounded-md transition-colors">
+    <div 
+      className={`relative flex items-center justify-center w-10 h-10 cursor-pointer hover:bg-gray-100 rounded-md transition-colors ${active ? 'bg-blue-100' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-center">{icon}</div>
       {hasDropdown && (
         <div className="absolute right-0 bottom-0 p-0.5">
@@ -19,7 +24,15 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({ icon, hasDropdown = false
   )
 }
 
-const ToolbarFloating: React.FC = () => {
+interface ToolbarFloatingProps {
+  onToggleFootprintEditor?: () => void
+  footprintEditorActive?: boolean
+}
+
+const ToolbarFloating: React.FC<ToolbarFloatingProps> = ({ 
+  onToggleFootprintEditor,
+  footprintEditorActive = false 
+}) => {
   return (
     <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10 bg-white rounded-full shadow-lg py-2 px-2 flex items-center space-x-1">
       {/* Arrow/Selection tool */}
@@ -55,14 +68,25 @@ const ToolbarFloating: React.FC = () => {
         hasDropdown
       />
 
-      {/* Square/Rectangle tool */}
+      {/* Square/Rectangle tool - Footprint Editor */}
       <ToolbarButton
         icon={
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="4" y="4" width="16" height="16" rx="1" stroke="currentColor" strokeWidth="1.5" />
+            <rect 
+              x="4" 
+              y="4" 
+              width="16" 
+              height="16" 
+              rx="1" 
+              stroke={footprintEditorActive ? "#3B82F6" : "currentColor"} 
+              strokeWidth="1.5" 
+              fill={footprintEditorActive ? "#E3F2FD" : "none"} 
+            />
           </svg>
         }
         hasDropdown
+        active={footprintEditorActive}
+        onClick={onToggleFootprintEditor}
       />
 
       {/* Shape/Draw tool */}
