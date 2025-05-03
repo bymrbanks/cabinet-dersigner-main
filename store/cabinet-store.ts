@@ -107,10 +107,11 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
     width?: number, 
     depth?: number, 
     type: "base" | "wall" = "base",
-    rotationDegrees: number = 0
+    rotationDegrees: number = 0,
+    externalId?: string  // Optional external ID (e.g., footprint ID)
   ) => {
     const newCabinet: Cabinet = {
-      id: `cabinet-${uuidv4()}`,
+      id: externalId || `cabinet-${uuidv4()}`,
       position: position || [0, 0, 0],
       width: width || 600, // Default width if not specified
       height: type === "wall" ? 600 : 720, // Wall cabinets are typically shorter
@@ -130,13 +131,30 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
       defaultHandleConfig: { ...defaultHandleConfig },
     }
 
-    set((state) => ({
-      cabinets: [...state.cabinets, newCabinet],
-      activeCabinetId: newCabinet.id,
-      selectedPart: newCabinet.id,
-    }))
+    set((state) => {
+      // Check if a cabinet with this ID already exists
+      const exists = state.cabinets.some(c => c.id === newCabinet.id);
+      
+      if (exists) {
+        // Update the existing cabinet instead of adding a new one
+        return {
+          cabinets: state.cabinets.map(c => 
+            c.id === newCabinet.id ? { ...c, ...newCabinet } : c
+          ),
+          activeCabinetId: newCabinet.id,
+          selectedPart: newCabinet.id,
+        };
+      }
+      
+      // Add a new cabinet
+      return {
+        cabinets: [...state.cabinets, newCabinet],
+        activeCabinetId: newCabinet.id,
+        selectedPart: newCabinet.id,
+      };
+    });
 
-    get().saveToHistory()
+    get().saveToHistory();
   },
   removeCabinet: (id) => {
     const cabinets = get().cabinets.filter((cabinet) => cabinet.id !== id)
@@ -898,5 +916,119 @@ export const useCabinetStore = create<CabinetStoreState>()((set, get) => ({
   },
   canUndo: () => get().currentHistoryIndex > 0,
   canRedo: () => get().currentHistoryIndex < get().history.length - 1,
+
+  // Add new method to update compartment width
+  updateCompartmentWidth: (cabinetId, compartmentIndex, width) => {
+    // Convert from display unit if needed
+    width = get().convertFromCurrentUnit(width);
+    
+    // Apply constraints
+    width = Math.max(get().minWidth / 2, Math.min(get().maxWidth, width));
+    
+    set((state) => ({
+      cabinets: state.cabinets.map((cabinet) => {
+        if (cabinet.id === cabinetId) {
+          const updatedCompartments = [...cabinet.compartments];
+          
+          if (updatedCompartments[compartmentIndex]) {
+            updatedCompartments[compartmentIndex] = {
+              ...updatedCompartments[compartmentIndex],
+              width,
+            };
+            
+            // Recalculate cabinet's total width
+            const totalWidth = updatedCompartments.reduce(
+              (sum, comp) => sum + (comp.width || cabinet.width / updatedCompartments.length),
+              0
+            );
+            
+            // Update the cabinet's width to match the sum of compartment widths
+            return { 
+              ...cabinet, 
+              width: totalWidth,
+              compartments: updatedCompartments 
+            };
+          }
+        }
+        return cabinet;
+      }),
+    }));
+    
+    get().saveToHistory();
+  },
+  
+  // Add new method to update compartment position
+  updateCompartmentPosition: (cabinetId, compartmentIndex, xOffset) => {
+    set((state) => ({
+      cabinets: state.cabinets.map((cabinet) => {
+        if (cabinet.id === cabinetId) {
+          const updatedCompartments = [...cabinet.compartments];
+          
+          if (updatedCompartments[compartmentIndex]) {
+            updatedCompartments[compartmentIndex] = {
+              ...updatedCompartments[compartmentIndex],
+              xOffset,
+            };
+            
+            return { 
+              ...cabinet, 
+              compartments: updatedCompartments 
+            };
+          }
+        }
+        return cabinet;
+      }),
+    }));
+    
+    get().saveToHistory();
+  },
+  
+  // Save the generated compartments to the store
+  saveGeneratedCompartments: (cabinetId, compartments) => {
+    console.log(`Saving compartments for cabinet ${cabinetId}:`, compartments);
+    
+    set((state) => {
+      const cabinetIndex = state.cabinets.findIndex(c => c.id === cabinetId);
+      
+      // If cabinet doesn't exist, don't update anything
+      if (cabinetIndex === -1) {
+        console.warn(`Cabinet with ID ${cabinetId} not found`);
+        return state;
+      }
+      
+      const cabinet = state.cabinets[cabinetIndex];
+      
+      // Get the current sections and shelves from existing compartments if available
+      const updatedCompartments = compartments.map((comp, index) => {
+        // Try to find existing compartment
+        const existingComp = cabinet.compartments[index] || { sections: [], shelves: [50] };
+        
+        return {
+          ...existingComp,
+          width: comp.width,
+          xOffset: comp.xOffset,
+        };
+      });
+      
+      // Create updated cabinet with new compartments and total width
+      const updatedCabinet = {
+        ...cabinet,
+        compartments: updatedCompartments,
+        // Update the cabinet's total width to match compartments if needed
+        width: compartments.reduce((sum, comp) => sum + comp.width, 0)
+      };
+      
+      // Create new cabinets array with the updated cabinet
+      const updatedCabinets = [...state.cabinets];
+      updatedCabinets[cabinetIndex] = updatedCabinet;
+      
+      return {
+        ...state,
+        cabinets: updatedCabinets
+      };
+    });
+    
+    get().saveToHistory();
+  },
 }))
 

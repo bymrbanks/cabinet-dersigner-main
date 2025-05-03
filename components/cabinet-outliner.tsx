@@ -42,6 +42,7 @@ export default function CabinetOutliner() {
     if (id.includes("drawer")) return "Drawer"
     if (id.includes("door")) return "Door"
     if (id.includes("shelf")) return "Shelf"
+    if (id.includes("compartment") && !id.includes("drawer") && !id.includes("door") && !id.includes("shelf")) return "Compartment"
     if (id.includes("cabinet")) return "Cabinet"
     return "Part"
   }
@@ -72,6 +73,11 @@ export default function CabinetOutliner() {
       const compartmentIndex = parts[parts.indexOf("compartment") + 1]
       const shelfIndex = parts[parts.indexOf("shelf") + 1]
       return `Shelf ${compartmentIndex}-${shelfIndex}`
+    }
+    
+    if (id.includes("compartment") && !id.includes("drawer") && !id.includes("door") && !id.includes("shelf")) {
+      const compartmentIndex = parts[parts.indexOf("compartment") + 1]
+      return `Compartment ${parseInt(compartmentIndex) + 1}`
     }
     
     if (id.includes("cabinet")) {
@@ -248,10 +254,10 @@ function OutlinerItem({ item, onSelect, onToggle, depth = 0 }: OutlinerItemProps
         )}
       </div>
       
-      {/* Render children if expanded */}
+      {/* Render children if there are any and the item is expanded */}
       {hasChildren && isExpanded && (
         <div>
-          {item.children!.map((child) => (
+          {item.children?.map((child) => (
             <OutlinerItem
               key={child.id}
               item={child}

@@ -21,6 +21,8 @@ export interface CabinetSection {
 export interface CabinetCompartment {
   sections: CabinetSection[]
   shelves: number[] // Heights (percentage) where shelves are positioned
+  width?: number // Width of this specific compartment
+  xOffset?: number // X position offset for this compartment
 }
 
 export interface Cabinet {
@@ -60,7 +62,8 @@ export interface CabinetStoreState {
     width?: number, 
     depth?: number, 
     type?: "base" | "wall",
-    rotationDegrees?: number
+    rotationDegrees?: number,
+    externalId?: string // Optional external ID (e.g., footprint ID)
   ) => void
   removeCabinet: (id: string) => void
   duplicateCabinet: (id: string) => void
@@ -106,6 +109,11 @@ export interface CabinetStoreState {
   addShelf: (compartmentIndex: number, position?: number) => void
   removeShelf: (compartmentIndex: number, shelfIndex: number) => void
   updateShelfPosition: (compartmentIndex: number, shelfIndex: number, position: number) => void
+  
+  // Compartment operations
+  updateCompartmentWidth: (cabinetId: string, compartmentIndex: number, width: number) => void
+  updateCompartmentPosition: (cabinetId: string, compartmentIndex: number, xOffset: number) => void
+  saveGeneratedCompartments: (cabinetId: string, compartments: { width: number, xOffset: number }[]) => void
   
   // Handle operations
   getHandleById: (id: string) => HandleConfig | null

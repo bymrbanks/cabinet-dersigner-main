@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { Footprint, ResizeState } from './types'
 import CabinetCarcass from '../cabinet/CabinetCarcass'
+import CabinetGroup from '../cabinet/CabinetGroup'
 
 // Define the edge types for single-direction resizing
 type Edge = 'top' | 'bottom' | 'left' | 'right' | 'height' | null;
@@ -239,13 +240,14 @@ export default function FootprintBox({
       }}
     >
       {/* Cabinet carcass */}
-      <CabinetCarcass
+      <CabinetGroup
         position={[0, 0, 0]}
         width={width}
         height={height}
         depth={depth}
         color={boxColor}
         compartmentWidthThreshold={12} // 12 inches threshold for compartments
+        id={id}
       />
 
       {/* Border highlighting the footprint */}
